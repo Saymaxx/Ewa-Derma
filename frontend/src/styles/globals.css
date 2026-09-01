@@ -1,0 +1,41 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-primary: #1E4E8C;
+    --color-primary-light: #5B87BE;
+    --color-accent: #C9A24B;
+    --color-background: #FFFFFF;
+    --color-surface: #F7F8FA;
+    --color-text-primary: #1A1A1A;
+    --color-text-secondary: #6B7280;
+    --color-success: #2E9E5B;
+    --color-warning: #D97706;
+    --color-danger: #DC2626;
+  }
+
+  body {
+    @apply bg-surface text-text-primary font-sans antialiased min-h-screen selection:bg-primary-100 selection:text-primary-700;
+  }
+}
+
+/* Custom scrollbar for clean clinic dashboard */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F1F5F9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}

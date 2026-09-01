@@ -1,0 +1,314 @@
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ConflictException,
+  Logger,
+} from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { EntityIdService } from '../common/services/entity-id.service';
+import { CreateAppointmentDto } from './dto/create-appointment.dto';
+import { UpdateAppointmentStatusDto } from './dto/update-appointment-status.dto';
+import { AppointmentStatus, AppointmentType } from '@prisma/client';
+
+const VALID_TRANSITIONS: Record<AppointmentStatus, AppointmentStatus[]> = {
+  [AppointmentStatus.SCHEDULED]: [
+    AppointmentStatus.CONFIRMED,
+    AppointmentStatus.CHECKED_IN,
+    AppointmentStatus.CANCELLED,
+    AppointmentStatus.NO_SHOW,
+  ],
+  [AppointmentStatus.CONFIRMED]: [
+    AppointmentStatus.CHECKED_IN,
+    AppointmentStatus.CANCELLED,
+    AppointmentStatus.NO_SHOW,
+  ],
+  [AppointmentStatus.CHECKED_IN]: [
+    AppointmentStatus.WAITING,
+    AppointmentStatus.IN_CONSULTATION,
+    AppointmentStatus.CANCELLED,
+  ],
+  [AppointmentStatus.WAITING]: [
+    AppointmentStatus.IN_CONSULTATION,
+    AppointmentStatus.CANCELLED,
+  ],
+  [AppointmentStatus.IN_CONSULTATION]: [
+    AppointmentStatus.COMPLETED,
+    AppointmentStatus.CANCELLED,
+  ],
+  [AppointmentStatus.COMPLETED]: [],
+  [AppointmentStatus.CANCELLED]: [],
+  [AppointmentStatus.NO_SHOW]: [],
+};
+
+@Injectable()
+export class AppointmentsService {
+  private readonly logger = new Logger(AppointmentsService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly entityIdService: EntityIdService,
+  ) {}
+
+  async create(dto: CreateAppointmentDto, createdByUserId?: string) {
+    // 1. Verify Patient exists
+    const patient = await this.prisma.patient.findUnique({
+      where: { id: dto.patientId },
+    });
+    if (!patient || !patient.isActive) {
+      throw new NotFoundException(`Patient not found or inactive with ID: ${dto.patientId}`);
+    }
+
+    // 2. Verify Doctor exists
+    const doctor = await this.prisma.doctor.findUnique({
+      where: { id: dto.doctorId },
+      include: {
+        user: { select: { firstName: true, lastName: true } },
+      },
+    });
+    if (!doctor || !doctor.isActive) {
+      throw new NotFoundException(`Doctor not found or inactive with ID: ${dto.doctorId}`);
+    }
+
+    const appointmentDateObj = new Date(dto.appointmentDate);
+
+    // 3. Prevent Double-Booking (Check overlapping non-cancelled slots)
+    const conflict = await this.prisma.appointment.findFirst({
+      where: {
+        doctorId: dto.doctorId,
+        appointmentDate: appointmentDateObj,
+        status: { notIn: [AppointmentStatus.CANCELLED, AppointmentStatus.NO_SHOW] },
+        AND: [
+          { startTime: { lt: dto.endTime } },
+          { endTime: { gt: dto.startTime } },
+        ],
+      },
+    });
+
+    if (conflict) {
+      throw new ConflictException(
+        `Dr. ${doctor.user.firstName} ${doctor.user.lastName} is already booked from ${conflict.startTime} to ${conflict.endTime} on ${dto.appointmentDate}. Please choose a different slot.`,
+      );
+    }
+
+    // 4. Generate sequential Appointment Code: A-2001
+    const appointmentCode = await this.entityIdService.generateNextId('A');
+
+    // Default status: If walk-in, immediately mark as CHECKED_IN
+    const initialStatus = dto.isWalkIn ? AppointmentStatus.CHECKED_IN : AppointmentStatus.SCHEDULED;
+    const now = new Date();
+
+    const appointment = await this.prisma.appointment.create({
+      data: {
+        appointmentCode,
+        patientId: dto.patientId,
+        doctorId: dto.doctorId,
+        appointmentDate: appointmentDateObj,
+        startTime: dto.startTime,
+        endTime: dto.endTime,
+        type: dto.type || AppointmentType.CONSULTATION,
+        status: initialStatus,
+        reason: dto.reason?.trim() || null,
+        notes: dto.notes?.trim() || null,
+        isWalkIn: !!dto.isWalkIn,
+        checkedInAt: dto.isWalkIn ? now : null,
+      },
+      include: {
+        patient: true,
+        doctor: {
+          include: {
+            user: { select: { firstName: true, lastName: true } },
+          },
+        },
+      },
+    });
+
+    // Record initial status in history
+    await this.prisma.appointmentStatusHistory.create({
+      data: {
+        appointmentId: appointment.id,
+        fromStatus: null,
+        toStatus: initialStatus,
+        changedBy: createdByUserId || 'SYSTEM',
+        comment: dto.isWalkIn ? 'Direct Walk-In Check-In' : 'Initial booking created',
+      },
+    });
+
+    this.logger.log(`Created Appointment: ${appointment.appointmentCode} for Patient ${patient.patientCode} with Dr. ${doctor.user.lastName}`);
+    return appointment;
+  }
+
+  async findAll(filters: {
+    date?: string;
+    doctorId?: string;
+    patientId?: string;
+    status?: AppointmentStatus;
+  }) {
+    const where: any = {};
+
+    if (filters.date) {
+      where.appointmentDate = new Date(filters.date);
+    }
+    if (filters.doctorId) {
+      where.doctorId = filters.doctorId;
+    }
+    if (filters.patientId) {
+      where.patientId = filters.patientId;
+    }
+    if (filters.status) {
+      where.status = filters.status;
+    }
+
+    return this.prisma.appointment.findMany({
+      where,
+      orderBy: [{ appointmentDate: 'desc' }, { startTime: 'asc' }],
+      include: {
+        patient: {
+          select: {
+            id: true,
+            patientCode: true,
+            firstName: true,
+            lastName: true,
+            phone: true,
+            gender: true,
+            bloodGroup: true,
+          },
+        },
+        doctor: {
+          include: {
+            user: {
+              select: {
+                firstName: true,
+                lastName: true,
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+
+  async getLiveWaitingQueue(doctorId?: string) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    return this.prisma.appointment.findMany({
+      where: {
+        appointmentDate: today,
+        doctorId: doctorId || undefined,
+        status: {
+          in: [
+            AppointmentStatus.CHECKED_IN,
+            AppointmentStatus.WAITING,
+            AppointmentStatus.IN_CONSULTATION,
+          ],
+        },
+      },
+      orderBy: [
+        // Active consultation first, then by check-in timestamp
+        { status: 'desc' },
+        { checkedInAt: 'asc' },
+      ],
+      include: {
+        patient: true,
+        doctor: {
+          include: {
+            user: { select: { firstName: true, lastName: true } },
+          },
+        },
+      },
+    });
+  }
+
+  async findOne(id: string) {
+    const appointment = await this.prisma.appointment.findFirst({
+      where: {
+        OR: [{ id }, { appointmentCode: id }],
+      },
+      include: {
+        patient: true,
+        doctor: {
+          include: {
+            user: {
+              select: {
+                firstName: true,
+                lastName: true,
+                email: true,
+                phoneNumber: true,
+              },
+            },
+          },
+        },
+        statusHistory: {
+          orderBy: { createdAt: 'asc' },
+        },
+      },
+    });
+
+    if (!appointment) {
+      throw new NotFoundException(`Appointment not found with identifier: ${id}`);
+    }
+
+    return appointment;
+  }
+
+  async updateStatus(
+    id: string,
+    dto: UpdateAppointmentStatusDto,
+    changedByUserId?: string,
+  ) {
+    const appointment = await this.findOne(id);
+    const currentStatus = appointment.status;
+    const targetStatus = dto.status;
+
+    // Check if transition is valid
+    const allowedNextStatuses = VALID_TRANSITIONS[currentStatus] || [];
+    if (!allowedNextStatuses.includes(targetStatus)) {
+      throw new BadRequestException(
+        `Invalid status transition from "${currentStatus}" to "${targetStatus}". Allowed next states: [${allowedNextStatuses.join(', ') || 'None (Terminal state)'}]`,
+      );
+    }
+
+    const now = new Date();
+    const updateData: any = {
+      status: targetStatus,
+    };
+
+    if (targetStatus === AppointmentStatus.CHECKED_IN && !appointment.checkedInAt) {
+      updateData.checkedInAt = now;
+    } else if (targetStatus === AppointmentStatus.COMPLETED) {
+      updateData.completedAt = now;
+    } else if (targetStatus === AppointmentStatus.CANCELLED) {
+      updateData.cancelledAt = now;
+      updateData.cancellationReason = dto.cancellationReason?.trim() || null;
+    }
+
+    // Atomic update + history log
+    const [updatedAppointment] = await this.prisma.$transaction([
+      this.prisma.appointment.update({
+        where: { id: appointment.id },
+        data: updateData,
+        include: {
+          patient: true,
+          doctor: {
+            include: {
+              user: { select: { firstName: true, lastName: true } },
+            },
+          },
+        },
+      }),
+      this.prisma.appointmentStatusHistory.create({
+        data: {
+          appointmentId: appointment.id,
+          fromStatus: currentStatus,
+          toStatus: targetStatus,
+          changedBy: changedByUserId || 'SYSTEM',
+          comment: dto.comment?.trim() || (dto.cancellationReason ? `Cancelled: ${dto.cancellationReason}` : null),
+        },
+      }),
+    ]);
+
+    this.logger.log(`Status changed for Appointment ${appointment.appointmentCode}: ${currentStatus} -> ${targetStatus}`);
+    return updatedAppointment;
+  }
+}
