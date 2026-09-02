@@ -1,16 +1,16 @@
 import React from 'react';
-import { Sparkles } from 'lucide-react';
 
 export interface LogoProps {
   size?: 'sm' | 'md' | 'lg';
   variant?: 'full' | 'icon-only';
+  className?: string;
 }
 
-export const Logo: React.FC<LogoProps> = ({ size = 'md', variant = 'full' }) => {
-  const iconSizes = {
-    sm: 'w-7 h-7 text-sm',
-    md: 'w-10 h-10 text-base',
-    lg: 'w-14 h-14 text-xl',
+export const Logo: React.FC<LogoProps> = ({ size = 'md', variant = 'full', className = '' }) => {
+  const imageSizes = {
+    sm: 'w-8 h-8',
+    md: 'w-11 h-11',
+    lg: 'w-16 h-16',
   };
 
   const textSizes = {
@@ -26,27 +26,27 @@ export const Logo: React.FC<LogoProps> = ({ size = 'md', variant = 'full' }) => 
   };
 
   return (
-    <div className="flex items-center gap-3 select-none">
-      {/* Clinic Monogram Icon with Gold Accent */}
+    <div className={`flex items-center gap-3 select-none ${className}`}>
+      {/* Official Ewa Derma Circular Badge Logo */}
       <div
-        className={`${iconSizes[size]} rounded-xl bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-white shadow-md relative overflow-hidden shrink-0 border border-primary-light/30`}
+        className={`${imageSizes[size]} rounded-full overflow-hidden shadow-md relative shrink-0 border-2 border-accent/40 bg-white hover:scale-105 transition-transform`}
       >
-        <span className="font-serif font-extrabold text-white tracking-tighter">ED</span>
-        {/* Subtle Gold accent pin */}
-        <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-accent ring-2 ring-white/50" />
+        <img
+          src="/ewa-derma-logo.jpg"
+          alt="Ewa Derma Clinic Logo"
+          className="w-full h-full object-cover"
+        />
       </div>
 
       {variant === 'full' && (
         <div className="flex flex-col">
           <div className="flex items-center gap-1.5">
-            <span className={`${textSizes[size]} text-primary font-serif font-bold`}>
+            <span className={`${textSizes[size]} text-primary font-serif font-extrabold tracking-tight`}>
               EWA DERMA
             </span>
           </div>
-          <span
-            className={`${subtitleSizes[size]} text-accent font-semibold uppercase -mt-1`}
-          >
-            CLINIC MANAGEMENT
+          <span className={`${subtitleSizes[size]} text-accent font-bold uppercase tracking-wider -mt-1`}>
+            SKIN • HAIR • CLINIC
           </span>
         </div>
       )}

@@ -78,7 +78,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem('ewa_user', JSON.stringify(userData));
 
       setUser(userData);
-      router.push('/dashboard');
+      if (userData.roles?.includes('DOCTOR') && !userData.roles?.includes('ADMIN')) {
+        router.push('/doctor/dashboard');
+      } else {
+        router.push('/dashboard');
+      }
     } catch (error: any) {
       setIsLoading(false);
       throw error;

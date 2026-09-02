@@ -90,21 +90,31 @@ describe('AppointmentsService', () => {
       expect(mockPrisma.appointmentStatusHistory.create).toHaveBeenCalled();
     });
 
-    it('should reject booking and throw ConflictException if doctor is already booked in that slot', async () => {
+    it('should allow booking multiple appointments in the same time slot', async () => {
       mockPrisma.patient.findUnique.mockResolvedValue({ id: 'pt-1', isActive: true });
       mockPrisma.doctor.findUnique.mockResolvedValue({
         id: 'doc-1',
         isActive: true,
+        workingDays: 'Mon,Tue,Wed,Thu,Fri,Sat,Sun',
         user: { firstName: 'A', lastName: 'Sharma' },
       });
-      // Existing overlapping appointment
-      mockPrisma.appointment.findFirst.mockResolvedValue({
-        id: 'existing-apt',
-        startTime: '10:00',
-        endTime: '10:30',
+
+      const res = await service.create(validDto, 'reception@ewaderma.com');
+      expect(res.appointmentCode).toEqual('A-2001');
+    });
+
+    it('should reject booking and throw BadRequestException if doctor is not working on that day', async () => {
+      mockPrisma.patient.findUnique.mockResolvedValue({ id: 'pt-1', isActive: true });
+      mockPrisma.doctor.findUnique.mockResolvedValue({
+        id: 'doc-1',
+        isActive: true,
+        workingDays: 'Mon,Tue,Wed,Thu,Fri',
+        user: { firstName: 'A', lastName: 'Sharma' },
       });
 
-      await expect(service.create(validDto, 'reception@ewaderma.com')).rejects.toThrow(ConflictException);
+      // 2026-09-06 is Sunday
+      const sundayDto = { ...validDto, appointmentDate: '2026-09-06' };
+      await expect(service.create(sundayDto, 'reception@ewaderma.com')).rejects.toThrow(BadRequestException);
     });
   });
 

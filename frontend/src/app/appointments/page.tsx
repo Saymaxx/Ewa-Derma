@@ -275,11 +275,11 @@ export default function AppointmentsPage() {
           <div className="flex items-center gap-2">
             <Calendar className="w-6 h-6 text-primary" />
             <h1 className="text-2xl font-bold font-serif text-text-primary">
-              Appointments & Live Waiting Queue
+              Appointments & Booking Schedule
             </h1>
           </div>
           <p className="text-sm text-text-secondary mt-1">
-            Real-time patient queue, doctor schedules, and appointment status transitions.
+            Manage patient appointments, doctor schedules, and front desk check-in.
           </p>
         </div>
 
@@ -308,120 +308,6 @@ export default function AppointmentsPage() {
           </div>
         )}
       </div>
-
-      {/* 1. LIVE WAITING QUEUE (RECEPTION / DOCTOR LIVE VIEW) */}
-      <Card accentTop>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Activity className="w-5 h-5 text-accent animate-pulse" />
-            <CardTitle>Live Waiting Room & Consultation Queue (Today)</CardTitle>
-          </div>
-          <Badge variant="warning" size="sm" dot>
-            {queue.length} Active in Clinic
-          </Badge>
-        </CardHeader>
-        <CardContent className="p-0">
-          {queue.length === 0 ? (
-            <div className="p-8 text-center text-text-secondary text-xs">
-              Waiting room is currently empty. Patients who check in will appear here in arrival order.
-            </div>
-          ) : (
-            <div className="divide-y divide-surface-border">
-              {queue.map((item, idx) => {
-                const statusBadge = STATUS_MAPPINGS[item.status] || { label: item.status, variant: 'default' };
-                return (
-                  <div
-                    key={item.id}
-                    className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-surface/50 transition-colors"
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="w-8 h-8 rounded-full bg-primary-50 text-primary border border-primary-200 flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
-                        {idx + 1}
-                      </div>
-
-                      <div className="space-y-0.5">
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-text-primary text-sm">
-                            {item.patient?.firstName} {item.patient?.lastName}
-                          </span>
-                          <span className="font-mono text-xs text-primary font-bold">
-                            {item.appointmentCode}
-                          </span>
-                          <Badge variant={statusBadge.variant} size="sm" dot>
-                            {statusBadge.label}
-                          </Badge>
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-x-3 text-xs text-text-secondary">
-                          <span>
-                            Doctor: <strong>Dr. {item.doctor?.user?.firstName} {item.doctor?.user?.lastName}</strong>
-                          </span>
-                          <span>•</span>
-                          <span>Slot: {item.startTime} - {item.endTime}</span>
-                          {item.checkedInAt && (
-                            <>
-                              <span>•</span>
-                              <span className="text-accent font-medium flex items-center gap-1">
-                                <Clock className="w-3 h-3" />
-                                Checked in at {new Date(item.checkedInAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
-                              </span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Quick State Machine Transition Actions */}
-                    <div className="flex items-center gap-2 shrink-0">
-                      {item.status === 'CHECKED_IN' && (
-                        <>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleStatusTransition(item.id, 'WAITING')}
-                          >
-                            Send to Waiting
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="primary"
-                            leftIcon={<Play className="w-3.5 h-3.5" />}
-                            onClick={() => handleStatusTransition(item.id, 'IN_CONSULTATION')}
-                          >
-                            Start Consultation
-                          </Button>
-                        </>
-                      )}
-
-                      {item.status === 'WAITING' && (
-                        <Button
-                          size="sm"
-                          variant="primary"
-                          leftIcon={<Play className="w-3.5 h-3.5" />}
-                          onClick={() => handleStatusTransition(item.id, 'IN_CONSULTATION')}
-                        >
-                          Start Consultation
-                        </Button>
-                      )}
-
-                      {item.status === 'IN_CONSULTATION' && (
-                        <Button
-                          size="sm"
-                          variant="accent"
-                          leftIcon={<CheckCircle2 className="w-3.5 h-3.5" />}
-                          onClick={() => handleStatusTransition(item.id, 'COMPLETED', 'Consultation finished')}
-                        >
-                          Complete Consultation
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
       {/* 2. FILTERABLE SCHEDULE LIST */}
       <Card>
@@ -718,7 +604,7 @@ export default function AppointmentsPage() {
             >
               {doctors.map((d) => (
                 <option key={d.id} value={d.id}>
-                  Dr. {d.user?.firstName} {d.user?.lastName} — {d.specialization} (Fee: ₹{d.consultationFee})
+                  Dr. {d.user?.firstName} {d.user?.lastName} — {d.specialization} (Fee: ₹{d.consultationFee} | Days: {d.workingDays || 'Mon-Sun'})
                 </option>
               ))}
             </select>

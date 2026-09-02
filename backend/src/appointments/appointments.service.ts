@@ -70,28 +70,38 @@ export class AppointmentsService {
       throw new NotFoundException(`Doctor not found or inactive with ID: ${dto.doctorId}`);
     }
 
-    const appointmentDateObj = new Date(dto.appointmentDate);
-
-    // 3. Prevent Double-Booking (Check overlapping non-cancelled slots)
-    const conflict = await this.prisma.appointment.findFirst({
-      where: {
-        doctorId: dto.doctorId,
-        appointmentDate: appointmentDateObj,
-        status: { notIn: [AppointmentStatus.CANCELLED, AppointmentStatus.NO_SHOW] },
-        AND: [
-          { startTime: { lt: dto.endTime } },
-          { endTime: { gt: dto.startTime } },
-        ],
-      },
-    });
-
-    if (conflict) {
-      throw new ConflictException(
-        `Dr. ${doctor.user.firstName} ${doctor.user.lastName} is already booked from ${conflict.startTime} to ${conflict.endTime} on ${dto.appointmentDate}. Please choose a different slot.`,
+    // 3. Verify Doctor Availability on requested Day of Week
+    if (doctor.workingDays) {
+      const dateParts = dto.appointmentDate.split('-');
+      const dateObj = new Date(
+        Date.UTC(Number(dateParts[0]), Number(dateParts[1]) - 1, Number(dateParts[2])),
       );
+      const dayShortNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const dayFullNames = [
+        'Sunday',
+        'Monday',
+        'Tuesday',
+        'Wednesday',
+        'Thursday',
+        'Friday',
+        'Saturday',
+      ];
+
+      const dayOfWeekShort = dayShortNames[dateObj.getUTCDay()];
+      const dayOfWeekFull = dayFullNames[dateObj.getUTCDay()];
+
+      const allowedDays = doctor.workingDays.split(',').map((d) => d.trim().slice(0, 3));
+
+      if (!allowedDays.includes(dayOfWeekShort)) {
+        throw new BadRequestException(
+          `Dr. ${doctor.user.firstName} ${doctor.user.lastName} is not available on ${dayOfWeekFull}s (${dto.appointmentDate}). Scheduled working days: ${doctor.workingDays}.`,
+        );
+      }
     }
 
-    // 4. Generate sequential Appointment Code: A-2001
+    const appointmentDateObj = new Date(dto.appointmentDate);
+
+    // Generate sequential Appointment Code: A-2001
     const appointmentCode = await this.entityIdService.generateNextId('A');
 
     // Default status: If walk-in, immediately mark as CHECKED_IN
@@ -189,12 +199,8 @@ export class AppointmentsService {
   }
 
   async getLiveWaitingQueue(doctorId?: string) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
     return this.prisma.appointment.findMany({
       where: {
-        appointmentDate: today,
         doctorId: doctorId || undefined,
         status: {
           in: [

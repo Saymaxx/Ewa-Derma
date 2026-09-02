@@ -202,3 +202,36 @@ All endpoints follow the uniform API response shape:
 - **Path:** `/api/prescriptions/:id/pdf`
 - **Access:** `ADMIN`, `DOCTOR`, `RECEPTIONIST`
 - **Response:** Binary PDF stream (`Content-Type: application/pdf`) formatted with Ewa Derma letterhead.
+
+---
+
+## 8. Reports & Analytics Module (Phase 7a)
+
+### 8.1 Get Appointments Analytics Report
+- **Method:** `GET`
+- **Path:** `/api/reports/appointments`
+- **Access:** `ADMIN`, `RECEPTIONIST`, `DOCTOR` (Doctor access is scoped to own doctorId)
+- **Query Parameters:** `startDate` (ISO), `endDate` (ISO), `doctorId` (optional), `status` (optional), `type` (optional).
+- **Response:** Summary metrics (total, completed, completion rate %, cancelled), daily trend, status breakdown, doctor performance breakdown, itemized appointment records.
+
+### 8.2 Get Patients & Follow-Ups Analytics Report
+- **Method:** `GET`
+- **Path:** `/api/reports/patients`
+- **Access:** `ADMIN`, `RECEPTIONIST`, `DOCTOR` (Doctor access is scoped to own doctorId)
+- **Query Parameters:** `startDate` (ISO), `endDate` (ISO), `doctorId` (optional).
+- **Response:** Summary metrics (new registrations, returning patients >1 visit, pending follow-ups, overdue follow-ups), new patient roster, follow-up call tracking list.
+
+### 8.3 Export Appointments Report (PDF, CSV, Excel)
+- **Method:** `GET`
+- **Path:** `/api/reports/appointments/export`
+- **Access:** `ADMIN`, `RECEPTIONIST`, `DOCTOR`
+- **Query Parameters:** `format` (`pdf` | `csv` | `excel`), `startDate`, `endDate`, `doctorId`, `status`, `type`.
+- **Response:** Downloadable file stream (`application/pdf`, `text/csv`, or `application/vnd.ms-excel`).
+
+### 8.4 Export Patients Report (PDF, CSV, Excel)
+- **Method:** `GET`
+- **Path:** `/api/reports/patients/export`
+- **Access:** `ADMIN`, `RECEPTIONIST`, `DOCTOR`
+- **Query Parameters:** `format` (`pdf` | `csv` | `excel`), `startDate`, `endDate`, `doctorId`.
+- **Response:** Downloadable file stream (`application/pdf`, `text/csv`, or `application/vnd.ms-excel`).
+

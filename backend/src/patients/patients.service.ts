@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityIdService } from '../common/services/entity-id.service';
 import { CreatePatientDto } from './dto/create-patient.dto';
@@ -14,6 +14,33 @@ export class PatientsService {
   ) {}
 
   async create(dto: CreatePatientDto) {
+    const cleanPhone = dto.phone.trim();
+    const cleanEmail = dto.email ? dto.email.toLowerCase().trim() : null;
+
+    // 1. Check for Duplicate Patient Record by Phone
+    const existingByPhone = await this.prisma.patient.findFirst({
+      where: { phone: cleanPhone, isActive: true },
+    });
+
+    if (existingByPhone) {
+      throw new ConflictException(
+        `A patient with phone number "${cleanPhone}" is already registered (${existingByPhone.patientCode} - ${existingByPhone.firstName} ${existingByPhone.lastName}). Duplicate patient records are not allowed.`,
+      );
+    }
+
+    // 2. Check for Duplicate Patient Record by Email (if provided)
+    if (cleanEmail) {
+      const existingByEmail = await this.prisma.patient.findFirst({
+        where: { email: cleanEmail, isActive: true },
+      });
+
+      if (existingByEmail) {
+        throw new ConflictException(
+          `A patient with email "${cleanEmail}" is already registered (${existingByEmail.patientCode} - ${existingByEmail.firstName} ${existingByEmail.lastName}). Duplicate patient records are not allowed.`,
+        );
+      }
+    }
+
     const patientCode = await this.entityIdService.generateNextId('P');
 
     const patient = await this.prisma.patient.create({
@@ -21,8 +48,8 @@ export class PatientsService {
         patientCode,
         firstName: dto.firstName.trim(),
         lastName: dto.lastName.trim(),
-        phone: dto.phone.trim(),
-        email: dto.email ? dto.email.toLowerCase().trim() : null,
+        phone: cleanPhone,
+        email: cleanEmail,
         dateOfBirth: dto.dateOfBirth ? new Date(dto.dateOfBirth) : null,
         gender: dto.gender || 'NOT_SPECIFIED',
         bloodGroup: dto.bloodGroup || 'UNKNOWN',

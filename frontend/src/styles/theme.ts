@@ -4,13 +4,13 @@
  */
 
 export const THEME_COLORS = {
-  // Primary Clinical Blue
+  // Primary Clinical Royal Purple (Replaced Blue)
   primary: {
-    DEFAULT: '#1E4E8C',
-    light: '#5B87BE',
-    dark: '#133561',
-    surface: '#F0F5FA',
-    border: '#DCE7F3',
+    DEFAULT: '#5B21B6',
+    light: '#8B5CF6',
+    dark: '#3B0764',
+    surface: '#F5F3FF',
+    border: '#DDD6FE',
   },
   // Luxury Clinical Gold (Used for accents, badges, highlights - NOT base surfaces)
   accent: {

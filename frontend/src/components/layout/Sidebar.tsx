@@ -46,7 +46,7 @@ export const Sidebar: React.FC = () => {
       roles: ['ADMIN', 'RECEPTIONIST', 'DOCTOR'],
     },
     {
-      label: 'Appointments & Queue',
+      label: 'Appointments & Booking',
       href: '/appointments',
       icon: <Calendar className="w-5 h-5" />,
       roles: ['ADMIN', 'RECEPTIONIST', 'DOCTOR'],
@@ -80,9 +80,9 @@ export const Sidebar: React.FC = () => {
     // Admin only
     {
       label: 'Reports & Analytics',
-      href: '#',
+      href: '/reports',
       icon: <FileSpreadsheet className="w-5 h-5" />,
-      roles: ['ADMIN'],
+      roles: ['ADMIN', 'RECEPTIONIST', 'DOCTOR'],
     },
     {
       label: 'Clinic Settings',
@@ -95,12 +95,6 @@ export const Sidebar: React.FC = () => {
       href: '#',
       icon: <ShieldCheck className="w-5 h-5" />,
       roles: ['ADMIN'],
-    },
-    // Internal Design System Preview (available to all)
-    {
-      label: 'Design System',
-      href: '/design-system',
-      icon: <Palette className="w-5 h-5" />,
     },
   ];
 
