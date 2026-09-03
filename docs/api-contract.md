@@ -235,3 +235,58 @@ All endpoints follow the uniform API response shape:
 - **Query Parameters:** `format` (`pdf` | `csv` | `excel`), `startDate`, `endDate`, `doctorId`.
 - **Response:** Downloadable file stream (`application/pdf`, `text/csv`, or `application/vnd.ms-excel`).
 
+---
+
+## 9. Billing & Payments Module (Phase 4)
+
+### 9.1 Services Catalog APIs
+- **GET /api/services** — Access: All authenticated roles. Returns list of available clinic procedure services (Consultation, Laser, PRP, Chemical Peel, etc.).
+- **POST /api/services** — Access: `ADMIN`. Creates a new procedure service with base price and description.
+- **PATCH /api/services/:id** — Access: `ADMIN`. Updates service price, name, or active status.
+
+### 9.2 Invoices APIs
+- **POST /api/invoices** — Access: `ADMIN`, `RECEPTIONIST`. Generates invoice (`INV-5000` series) with itemized line items (services & medicines), discount validation (requires `discountReason` if discount > 0), and initial payment status calculation.
+- **GET /api/invoices** — Access: `ADMIN`, `RECEPTIONIST`, `DOCTOR`. Returns filterable invoice list by `patientId`, `status`, `startDate`, `endDate`.
+- **GET /api/invoices/:id** — Access: `ADMIN`, `RECEPTIONIST`, `DOCTOR`. Returns full invoice details, line items, payment history, and net balance due.
+- **PATCH /api/invoices/:id/status** — Access: `ADMIN`, `RECEPTIONIST`. Transitions invoice status along valid state machine branches (`DRAFT → PENDING`, `PENDING → PARTIALLY_PAID | PAID`, `CANCELLED`).
+- **GET /api/invoices/:id/pdf** — Access: `ADMIN`, `RECEPTIONIST`, `DOCTOR`. Streams printable A4 PDF invoice with Royal Purple letterhead, itemized line items, and payment status badge.
+
+### 9.3 Payments APIs
+- **POST /api/payments** — Access: `ADMIN`, `RECEPTIONIST`. Records payment against an invoice (Method: `CASH`, `UPI`, `CARD`, `BANK_TRANSFER`), updates cumulative paid amount, and automatically transitions invoice status (`PENDING → PARTIALLY_PAID → PAID`).
+- **GET /api/payments/invoice/:invoiceId** — Access: `ADMIN`, `RECEPTIONIST`, `DOCTOR`. Returns payment audit log for specified invoice.
+
+### 9.4 Refunds APIs
+- **POST /api/refunds** — Access: `ADMIN` ONLY. Issues refund as a separate linked audit record against a payment, updates net paid amount, and recalculates invoice status without editing original payment history.
+
+## 10. Inventory Management Module (Phase 5)
+
+### 10.1 Suppliers & Vendors APIs
+- **GET /api/suppliers** — Access: `ADMIN`, `INVENTORY_MANAGER`, `RECEPTIONIST`. Returns list of pharmaceutical suppliers with active filter and search.
+- **POST /api/suppliers** — Access: `ADMIN`, `INVENTORY_MANAGER`. Registers a new vendor record (name, contact person, phone, email, GSTIN, address).
+- **PATCH /api/suppliers/:id** — Access: `ADMIN`, `INVENTORY_MANAGER`. Updates vendor details and status.
+
+### 10.2 Extended Formulary & Stock APIs
+- **GET /api/medicines/:id/stock** — Access: All authenticated roles. Computes real-time current stock by aggregating `inventory_transactions` ledger rows, returning batch breakdown.
+- **GET /api/medicines/:id/transactions** — Access: `ADMIN`, `INVENTORY_MANAGER`. Returns complete stock movement ledger history for audit investigation.
+- **PATCH /api/medicines/:id** — Access: `ADMIN`, `INVENTORY_MANAGER`. Updates medicine master details (selling price, purchase cost price, MRP, minimum stock threshold).
+
+### 10.3 Inventory Operations APIs
+- **POST /api/inventory/purchases** — Access: `ADMIN`, `INVENTORY_MANAGER`. Records stock purchase receipt (Stock IN), creates/updates `MedicineBatch`, and inserts `PURCHASE_IN` transaction entry.
+- **POST /api/inventory/adjustments** — Access: `ADMIN`, `INVENTORY_MANAGER`. Records manual stock adjustment or write-off (`DAMAGED_OUT`, `EXPIRED_OUT`, `ADJUSTMENT_IN`, `ADJUSTMENT_OUT`). Mandatory written reason string required.
+- **POST /api/prescriptions/:id/dispense** — Access: `ADMIN`, `INVENTORY_MANAGER`, `RECEPTIONIST`. Dispenses prescription medicines using **FEFO (First-Expiry-First-Out)** logic. Validates available unexpired stock before drawing quantity; rejects over-dispensing exceeding available stock.
+
+## 12. Complete Reports & Analytics Module (Phase 7a & 7b)
+
+### 12.1 Appointment & Patient Reports APIs (Phase 7a)
+- **GET /api/reports/appointments** — Access: `ADMIN`, `RECEPTIONIST`, `DOCTOR` (scoped). Returns booked vs completed counts, completion rate %, status distribution, and doctor performance.
+- **GET /api/reports/patients** — Access: `ADMIN`, `RECEPTIONIST`, `DOCTOR` (scoped). Returns new vs returning patient counts, pending follow-ups, overdue follow-up calls, and new registration list.
+- **GET /api/reports/appointments/export** — Access: `ADMIN`, `RECEPTIONIST`, `DOCTOR`. Downloads filtered appointment report in PDF, CSV, or Excel format.
+- **GET /api/reports/patients/export** — Access: `ADMIN`, `RECEPTIONIST`, `DOCTOR`. Downloads filtered patient registration & follow-up report in PDF, CSV, or Excel format.
+
+### 12.2 Revenue & Inventory Reports APIs (Phase 7b)
+- **GET /api/reports/revenue** — Access: `ADMIN`, `DOCTOR` (scoped). Returns collected revenue (net of refunds), billed revenue (total invoiced), outstanding balance due, payment method breakdown (`CASH`, `UPI`, `CARD`, `BANK_TRANSFER`), doctor attribution, and top services.
+- **GET /api/reports/inventory** — Access: `ADMIN`, `INVENTORY_MANAGER`. Returns total inventory valuation (reused Phase 5 cost logic), low stock items, expiring batches, top consumed medicines, and stock movement ledger history (`inventory_transactions`).
+- **GET /api/reports/revenue/export** — Access: `ADMIN`, `DOCTOR`. Downloads filtered revenue report in PDF, CSV, or Excel format.
+- **GET /api/reports/inventory/export** — Access: `ADMIN`, `INVENTORY_MANAGER`. Downloads filtered inventory & stock movement report in PDF, CSV, or Excel format.
+
+

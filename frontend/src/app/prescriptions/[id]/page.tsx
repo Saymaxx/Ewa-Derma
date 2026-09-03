@@ -25,6 +25,8 @@ import {
   Trash2,
   CheckCircle2,
   Loader2,
+  Mail,
+  MessageSquare,
 } from 'lucide-react';
 
 interface PrescriptionItemRow {
@@ -76,6 +78,40 @@ export default function PrescriptionDetailPage() {
   useEffect(() => {
     if (id) fetchPrescriptionAndVersions();
   }, [id, fetchPrescriptionAndVersions]);
+
+  // Notifications State
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [isSendingWA, setIsSendingWA] = useState(false);
+
+  const handleSendEmail = async () => {
+    if (!prescription) return;
+    setIsSendingEmail(true);
+    try {
+      const res = await api.post(`/notifications/send-prescription/${prescription.id}`, { channel: 'EMAIL' });
+      showToast(res.data.message || 'Prescription sent via email', 'success');
+    } catch (err: any) {
+      showToast(err.response?.data?.error?.message || err.response?.data?.message || 'Failed to send email', 'error');
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
+
+  const handleSendWhatsApp = async () => {
+    if (!prescription) return;
+    setIsSendingWA(true);
+    try {
+      const res = await api.post(`/notifications/send-prescription/${prescription.id}`, { channel: 'WHATSAPP' });
+      if (res.data.data?.status === 'FAILED') {
+        showToast(res.data.data.errorLog || 'WhatsApp is not connected yet', 'error');
+      } else {
+        showToast(res.data.message || 'Prescription sent via WhatsApp', 'success');
+      }
+    } catch (err: any) {
+      showToast(err.response?.data?.error?.message || err.response?.data?.message || 'WhatsApp is not connected yet', 'error');
+    } finally {
+      setIsSendingWA(false);
+    }
+  };
 
   const handleDownloadPdf = () => {
     if (!prescription) return;
@@ -205,18 +241,38 @@ export default function PrescriptionDetailPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
           <Button
             variant="outline"
+            size="sm"
+            onClick={handleSendEmail}
+            isLoading={isSendingEmail}
+            leftIcon={<Mail className="w-4 h-4 text-primary" />}
+          >
+            Send Email
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSendWhatsApp}
+            isLoading={isSendingWA}
+            leftIcon={<MessageSquare className="w-4 h-4 text-emerald-600" />}
+          >
+            Send WhatsApp
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             leftIcon={<Download className="w-4 h-4" />}
             onClick={handleDownloadPdf}
           >
-            Download PDF
+            PDF
           </Button>
 
           {isDoctorOrAdmin && prescription.status === 'ACTIVE' && (
             <Button
               variant="primary"
+              size="sm"
               leftIcon={<Edit3 className="w-4 h-4" />}
               onClick={openRevisionModal}
             >

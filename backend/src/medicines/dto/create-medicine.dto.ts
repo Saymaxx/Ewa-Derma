@@ -38,4 +38,22 @@ export class CreateMedicineDto {
   @IsNumber()
   @Min(0)
   mrp?: number;
+
+  @ApiProperty({ example: 180, default: 0, required: false })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  purchasePrice?: number;
+
+  @ApiProperty({ example: 10, default: 10, required: false })
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  minimumStock?: number;
+
+  @ApiProperty({ example: 12, default: 0, required: false })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  gstRate?: number;
 }

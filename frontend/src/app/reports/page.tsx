@@ -13,6 +13,8 @@ import {
   BarChart3,
   Calendar,
   Users,
+  CreditCard,
+  Package,
   Download,
   FileText,
   FileSpreadsheet,
@@ -25,29 +27,40 @@ import {
   Stethoscope,
   Loader2,
   ArrowUpRight,
+  ArrowDownRight,
   UserPlus,
   RefreshCw,
   Phone,
-  Lock,
+  IndianRupee,
+  PieChart,
+  TrendingUp,
 } from 'lucide-react';
 
 export default function ReportsPage() {
   const { user, hasRole } = useAuth();
   const { showToast } = useToast();
 
+  const isAdmin = hasRole(['ADMIN']);
+  const isDoctor = hasRole(['DOCTOR']);
+  const isInventoryManager = hasRole(['INVENTORY_MANAGER']);
+
   // Date range defaults (September 2026 active clinical data window)
-  const [activeTab, setActiveTab] = useState<'appointments' | 'patients'>('appointments');
+  const [activeTab, setActiveTab] = useState<'appointments' | 'patients' | 'revenue' | 'inventory'>('appointments');
   const [startDate, setStartDate] = useState('2026-09-01');
   const [endDate, setEndDate] = useState('2026-09-30');
   const [selectedDoctorId, setSelectedDoctorId] = useState<string>('');
   const [doctorsList, setDoctorsList] = useState<any[]>([]);
 
+  // Report Data States
   const [appointmentReport, setAppointmentReport] = useState<any>(null);
   const [patientReport, setPatientReport] = useState<any>(null);
+  const [revenueReport, setRevenueReport] = useState<any>(null);
+  const [inventoryReport, setInventoryReport] = useState<any>(null);
+
   const [isLoading, setIsLoading] = useState(true);
   const [isExporting, setIsExporting] = useState<string | null>(null);
 
-  // Fetch doctors for filter
+  // Fetch doctors for filter dropdown
   useEffect(() => {
     api
       .get('/doctors')
@@ -61,25 +74,27 @@ export default function ReportsPage() {
     try {
       if (activeTab === 'appointments') {
         const res = await api.get('/reports/appointments', {
-          params: {
-            startDate,
-            endDate,
-            doctorId: selectedDoctorId || undefined,
-          },
+          params: { startDate, endDate, doctorId: selectedDoctorId || undefined },
         });
         setAppointmentReport(res.data.data);
-      } else {
+      } else if (activeTab === 'patients') {
         const res = await api.get('/reports/patients', {
-          params: {
-            startDate,
-            endDate,
-            doctorId: selectedDoctorId || undefined,
-          },
+          params: { startDate, endDate, doctorId: selectedDoctorId || undefined },
         });
         setPatientReport(res.data.data);
+      } else if (activeTab === 'revenue') {
+        const res = await api.get('/reports/revenue', {
+          params: { startDate, endDate, doctorId: selectedDoctorId || undefined },
+        });
+        setRevenueReport(res.data.data);
+      } else if (activeTab === 'inventory') {
+        const res = await api.get('/reports/inventory', {
+          params: { startDate, endDate },
+        });
+        setInventoryReport(res.data.data);
       }
     } catch (err: any) {
-      showToast(err.response?.data?.error?.message || 'Failed to load report analytics', 'error');
+      showToast(err.response?.data?.error?.message || err.response?.data?.message || 'Failed to load report analytics', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -109,12 +124,11 @@ export default function ReportsPage() {
     }
   };
 
-  // Export report handler
+  // Export report handler (Reuses Phase 7a export mechanism)
   const handleExport = async (format: 'pdf' | 'csv' | 'excel') => {
     setIsExporting(format);
     try {
-      const endpoint =
-        activeTab === 'appointments' ? '/reports/appointments/export' : '/reports/patients/export';
+      const endpoint = `/reports/${activeTab}/export`;
 
       const response = await api.get(endpoint, {
         params: {
@@ -155,9 +169,6 @@ export default function ReportsPage() {
     }
   };
 
-  const isAdmin = hasRole(['ADMIN']);
-  const isDoctor = hasRole(['DOCTOR']);
-
   return (
     <div className="space-y-6">
       {/* 1. PAGE HEADER & EXPORT ACTION CONTROLS */}
@@ -169,11 +180,11 @@ export default function ReportsPage() {
               Clinical Reports & Analytics
             </h1>
             <Badge variant="accent" size="sm">
-              Phase 7a Scoped
+              Phase 7 Full Analytics
             </Badge>
           </div>
           <p className="text-sm text-text-secondary">
-            Filterable analytics and exportable reports for appointments, patient volume, and follow-up tracking.
+            Unified clinic reporting module for appointments, patient registrations, financial revenue, and inventory movements.
           </p>
         </div>
 
@@ -303,10 +314,9 @@ export default function ReportsPage() {
         </CardContent>
       </Card>
 
-      {/* 3. DATA-DRIVEN REPORT TYPE SELECTOR (EXTENSIBLE FOR PHASE 7b) */}
+      {/* 3. EXTENSIBLE TAB REGISTRY SELECTOR (PHASE 7b COMPLETE) */}
       <div className="flex flex-wrap items-center justify-between border-b border-surface-border pb-3 gap-2">
         <div className="flex items-center gap-2">
-          {/* Active Phase 7a Tabs */}
           <button
             type="button"
             onClick={() => setActiveTab('appointments')}
@@ -333,20 +343,35 @@ export default function ReportsPage() {
             Patients & Follow-Ups
           </button>
 
-          {/* Phase 7b Extension Placeholders (Disabled) */}
-          <div className="flex items-center gap-2 opacity-50 cursor-not-allowed">
-            <span className="px-3 py-1.5 rounded-xl bg-surface border border-surface-border text-text-muted text-xs flex items-center gap-1.5">
-              <Lock className="w-3 h-3 text-text-muted" />
+          {(isAdmin || isDoctor) && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('revenue')}
+              className={`px-4 py-2 rounded-xl font-semibold text-xs transition-all flex items-center gap-2 ${
+                activeTab === 'revenue'
+                  ? 'bg-primary text-white shadow-xs'
+                  : 'bg-surface text-text-secondary hover:bg-gray-100'
+              }`}
+            >
+              <CreditCard className="w-4 h-4 text-amber-300" />
               Revenue & Payments
-              <Badge variant="default" size="sm" className="text-[10px] py-0 px-1">Phase 7b</Badge>
-            </span>
+            </button>
+          )}
 
-            <span className="px-3 py-1.5 rounded-xl bg-surface border border-surface-border text-text-muted text-xs flex items-center gap-1.5">
-              <Lock className="w-3 h-3 text-text-muted" />
+          {(isAdmin || isInventoryManager) && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('inventory')}
+              className={`px-4 py-2 rounded-xl font-semibold text-xs transition-all flex items-center gap-2 ${
+                activeTab === 'inventory'
+                  ? 'bg-primary text-white shadow-xs'
+                  : 'bg-surface text-text-secondary hover:bg-gray-100'
+              }`}
+            >
+              <Package className="w-4 h-4 text-emerald-300" />
               Inventory Movement
-              <Badge variant="default" size="sm" className="text-[10px] py-0 px-1">Phase 7b</Badge>
-            </span>
-          </div>
+            </button>
+          )}
         </div>
 
         <span className="text-xs text-text-muted">
@@ -359,7 +384,6 @@ export default function ReportsPage() {
       {/* ============================================================= */}
       {activeTab === 'appointments' && (
         <div className="space-y-6">
-          {/* Summary Cards with Gold Accents */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <Card className="hover:border-primary/40 transition-colors">
               <CardContent className="p-4 flex items-center gap-3">
@@ -367,12 +391,8 @@ export default function ReportsPage() {
                   <Calendar className="w-5 h-5" />
                 </div>
                 <div>
-                  <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">
-                    Total Booked
-                  </span>
-                  <span className="text-2xl font-bold text-text-primary">
-                    {isLoading ? '...' : appointmentReport?.summary?.total || 0}
-                  </span>
+                  <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">Total Booked</span>
+                  <span className="text-2xl font-bold text-text-primary">{isLoading ? '...' : appointmentReport?.summary?.total || 0}</span>
                 </div>
               </CardContent>
             </Card>
@@ -383,12 +403,8 @@ export default function ReportsPage() {
                   <CheckCircle2 className="w-5 h-5" />
                 </div>
                 <div>
-                  <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">
-                    Completed
-                  </span>
-                  <span className="text-2xl font-bold text-status-success">
-                    {isLoading ? '...' : appointmentReport?.summary?.completed || 0}
-                  </span>
+                  <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">Completed</span>
+                  <span className="text-2xl font-bold text-status-success">{isLoading ? '...' : appointmentReport?.summary?.completed || 0}</span>
                 </div>
               </CardContent>
             </Card>
@@ -399,12 +415,8 @@ export default function ReportsPage() {
                   <ArrowUpRight className="w-5 h-5" />
                 </div>
                 <div>
-                  <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">
-                    Completion Rate
-                  </span>
-                  <span className="text-2xl font-bold text-accent">
-                    {isLoading ? '...' : `${appointmentReport?.summary?.completionRate || 0}%`}
-                  </span>
+                  <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">Completion Rate</span>
+                  <span className="text-2xl font-bold text-accent">{isLoading ? '...' : `${appointmentReport?.summary?.completionRate || 0}%`}</span>
                 </div>
               </CardContent>
             </Card>
@@ -415,23 +427,14 @@ export default function ReportsPage() {
                   <AlertTriangle className="w-5 h-5" />
                 </div>
                 <div>
-                  <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">
-                    Cancelled / No Show
-                  </span>
-                  <span className="text-2xl font-bold text-text-primary">
-                    {isLoading
-                      ? '...'
-                      : (appointmentReport?.summary?.cancelled || 0) +
-                        (appointmentReport?.summary?.noShow || 0)}
-                  </span>
+                  <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">Cancelled / No Show</span>
+                  <span className="text-2xl font-bold text-text-primary">{isLoading ? '...' : (appointmentReport?.summary?.cancelled || 0) + (appointmentReport?.summary?.noShow || 0)}</span>
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Breakdown Tables & Analytics Charts */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Status-wise Breakdown */}
             <Card accentTop>
               <CardHeader>
                 <div className="flex items-center gap-2">
@@ -445,20 +448,10 @@ export default function ReportsPage() {
                 ) : (
                   <div className="divide-y divide-surface-border">
                     {appointmentReport?.statusBreakdown?.map((item: any) => {
-                      const badge = STATUS_MAPPINGS[item.status] || {
-                        label: item.status,
-                        variant: 'default',
-                      };
+                      const badge = STATUS_MAPPINGS[item.status] || { label: item.status, variant: 'default' };
                       return (
-                        <div
-                          key={item.status}
-                          className="p-3.5 flex items-center justify-between hover:bg-surface/50 text-xs"
-                        >
-                          <div className="flex items-center gap-2">
-                            <Badge variant={badge.variant} size="sm" dot>
-                              {badge.label}
-                            </Badge>
-                          </div>
+                        <div key={item.status} className="p-3.5 flex items-center justify-between hover:bg-surface/50 text-xs">
+                          <Badge variant={badge.variant} size="sm" dot>{badge.label}</Badge>
                           <div className="flex items-center gap-4">
                             <span className="font-bold text-text-primary font-mono">{item.count}</span>
                             <span className="text-text-muted w-10 text-right">{item.percentage}%</span>
@@ -471,7 +464,6 @@ export default function ReportsPage() {
               </CardContent>
             </Card>
 
-            {/* Doctor-wise Breakdown */}
             <Card accentTop>
               <CardHeader>
                 <div className="flex items-center gap-2">
@@ -485,24 +477,14 @@ export default function ReportsPage() {
                 ) : (
                   <div className="divide-y divide-surface-border">
                     {appointmentReport?.doctorBreakdown?.map((doc: any) => (
-                      <div
-                        key={doc.doctorId}
-                        className="p-3.5 flex items-center justify-between hover:bg-surface/50 text-xs"
-                      >
+                      <div key={doc.doctorId} className="p-3.5 flex items-center justify-between hover:bg-surface/50 text-xs">
                         <div>
                           <span className="font-bold text-text-primary block">{doc.doctorName}</span>
                           <span className="text-text-muted text-[11px]">{doc.specialization}</span>
                         </div>
-
-                        <div className="flex items-center gap-4 text-right">
-                          <div>
-                            <span className="text-text-secondary block">
-                              <strong>{doc.completed}</strong> / {doc.total} Visits
-                            </span>
-                            <span className="text-accent font-bold text-[11px]">
-                              {doc.completionRate}% Rate
-                            </span>
-                          </div>
+                        <div className="text-right">
+                          <span className="text-text-secondary block"><strong>{doc.completed}</strong> / {doc.total} Visits</span>
+                          <span className="text-accent font-bold text-[11px]">{doc.completionRate}% Rate</span>
                         </div>
                       </div>
                     ))}
@@ -511,74 +493,6 @@ export default function ReportsPage() {
               </CardContent>
             </Card>
           </div>
-
-          {/* Itemized Appointments Table */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between w-full">
-                <div className="flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-primary" />
-                  <CardTitle>Filtered Appointment Records ({appointmentReport?.items?.length || 0})</CardTitle>
-                </div>
-              </div>
-            </CardHeader>
-
-            <CardContent className="p-0 overflow-x-auto">
-              {isLoading ? (
-                <div className="p-12 flex justify-center text-xs text-text-muted">
-                  <Loader2 className="w-5 h-5 animate-spin text-primary" />
-                </div>
-              ) : appointmentReport?.items?.length === 0 ? (
-                <div className="p-8 text-center text-xs text-text-muted">
-                  No appointments found matching the selected date range and filters.
-                </div>
-              ) : (
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="bg-surface border-b border-surface-border text-text-secondary font-semibold">
-                      <th className="p-3">Code</th>
-                      <th className="p-3">Date & Time</th>
-                      <th className="p-3">Patient</th>
-                      <th className="p-3">Doctor</th>
-                      <th className="p-3">Type</th>
-                      <th className="p-3">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-surface-border">
-                    {appointmentReport?.items?.map((item: any) => {
-                      const badge = STATUS_MAPPINGS[item.status] || {
-                        label: item.status,
-                        variant: 'default',
-                      };
-                      return (
-                        <tr key={item.id} className="hover:bg-surface/50">
-                          <td className="p-3 font-mono font-bold text-primary">{item.appointmentCode}</td>
-                          <td className="p-3">
-                            <span className="font-medium text-text-primary block">{item.appointmentDate}</span>
-                            <span className="text-text-muted text-[11px]">{item.startTime} - {item.endTime}</span>
-                          </td>
-                          <td className="p-3">
-                            <span className="font-semibold text-text-primary block">{item.patientName}</span>
-                            <span className="text-text-muted font-mono text-[11px]">{item.patientCode} • {item.patientPhone}</span>
-                          </td>
-                          <td className="p-3">
-                            <span className="font-medium text-text-primary block">{item.doctorName}</span>
-                            <span className="text-text-muted text-[11px]">{item.specialization}</span>
-                          </td>
-                          <td className="p-3 font-medium">{item.type}</td>
-                          <td className="p-3">
-                            <Badge variant={badge.variant} size="sm" dot>
-                              {badge.label}
-                            </Badge>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              )}
-            </CardContent>
-          </Card>
         </div>
       )}
 
@@ -587,7 +501,6 @@ export default function ReportsPage() {
       {/* ============================================================= */}
       {activeTab === 'patients' && (
         <div className="space-y-6">
-          {/* Summary Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <Card className="hover:border-primary/40 transition-colors">
               <CardContent className="p-4 flex items-center gap-3">
@@ -595,12 +508,8 @@ export default function ReportsPage() {
                   <UserPlus className="w-5 h-5" />
                 </div>
                 <div>
-                  <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">
-                    New Registrations
-                  </span>
-                  <span className="text-2xl font-bold text-text-primary">
-                    {isLoading ? '...' : patientReport?.summary?.totalNewPatients || 0}
-                  </span>
+                  <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">New Registrations</span>
+                  <span className="text-2xl font-bold text-text-primary">{isLoading ? '...' : patientReport?.summary?.totalNewPatients || 0}</span>
                 </div>
               </CardContent>
             </Card>
@@ -611,12 +520,8 @@ export default function ReportsPage() {
                   <RefreshCw className="w-5 h-5" />
                 </div>
                 <div>
-                  <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">
-                    Returning Patients
-                  </span>
-                  <span className="text-2xl font-bold text-status-success">
-                    {isLoading ? '...' : patientReport?.summary?.totalReturningPatients || 0}
-                  </span>
+                  <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">Returning Patients</span>
+                  <span className="text-2xl font-bold text-status-success">{isLoading ? '...' : patientReport?.summary?.totalReturningPatients || 0}</span>
                 </div>
               </CardContent>
             </Card>
@@ -627,12 +532,8 @@ export default function ReportsPage() {
                   <Clock className="w-5 h-5" />
                 </div>
                 <div>
-                  <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">
-                    Pending Follow-Ups
-                  </span>
-                  <span className="text-2xl font-bold text-accent">
-                    {isLoading ? '...' : patientReport?.summary?.pendingFollowUps || 0}
-                  </span>
+                  <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">Pending Follow-Ups</span>
+                  <span className="text-2xl font-bold text-accent">{isLoading ? '...' : patientReport?.summary?.pendingFollowUps || 0}</span>
                 </div>
               </CardContent>
             </Card>
@@ -643,62 +544,220 @@ export default function ReportsPage() {
                   <AlertTriangle className="w-5 h-5" />
                 </div>
                 <div>
+                  <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">Overdue Follow-Ups</span>
+                  <span className="text-2xl font-bold text-status-error">{isLoading ? '...' : patientReport?.summary?.overdueFollowUps || 0}</span>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================= */}
+      {/* TAB 3: REVENUE & PAYMENTS REPORT VIEW (PHASE 7B) */}
+      {/* ============================================================= */}
+      {activeTab === 'revenue' && (
+        <div className="space-y-6">
+          {/* Revenue Summary Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+            <Card className="border-l-4 border-l-accent hover:border-amber-400 transition-colors">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-50 text-accent border border-amber-200 flex items-center justify-center shrink-0">
+                  <IndianRupee className="w-5 h-5" />
+                </div>
+                <div>
                   <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">
-                    Overdue Follow-Ups
+                    Collected Revenue (Net)
                   </span>
-                  <span className="text-2xl font-bold text-status-error">
-                    {isLoading ? '...' : patientReport?.summary?.overdueFollowUps || 0}
+                  <span className="text-2xl font-bold text-emerald-700">
+                    {isLoading ? '...' : `₹${revenueReport?.summary?.collectedRevenue?.toLocaleString() || 0}`}
                   </span>
+                  <span className="text-[10px] text-text-muted block">Actual cash/UPI received</span>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:border-primary/40 transition-colors">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-purple-50 text-primary border border-purple-100 flex items-center justify-center shrink-0">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div>
+                  <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">
+                    Billed Revenue (Invoiced)
+                  </span>
+                  <span className="text-2xl font-bold text-primary">
+                    {isLoading ? '...' : `₹${revenueReport?.summary?.billedRevenue?.toLocaleString() || 0}`}
+                  </span>
+                  <span className="text-[10px] text-text-muted block">Total invoiced value</span>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:border-red-300 transition-colors">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-rose-50 text-red-600 border border-rose-200 flex items-center justify-center shrink-0">
+                  <Clock className="w-5 h-5" />
+                </div>
+                <div>
+                  <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">
+                    Outstanding Due
+                  </span>
+                  <span className="text-2xl font-bold text-red-600">
+                    {isLoading ? '...' : `₹${revenueReport?.summary?.totalOutstandingDue?.toLocaleString() || 0}`}
+                  </span>
+                  <span className="text-[10px] text-text-muted block">Unpaid invoice balance</span>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:border-amber-300 transition-colors">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-800 border border-amber-200 flex items-center justify-center shrink-0">
+                  <ArrowDownRight className="w-5 h-5" />
+                </div>
+                <div>
+                  <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">
+                    Refunds Issued
+                  </span>
+                  <span className="text-2xl font-bold text-amber-800">
+                    {isLoading ? '...' : `₹${revenueReport?.summary?.totalRefundsIssued?.toLocaleString() || 0}`}
+                  </span>
+                  <span className="text-[10px] text-text-muted block">Deducted from collected</span>
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Follow-Up Call Tracking Section (Supports Reception Day-to-Day Calling) */}
-          <Card accentTop>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Phone className="w-5 h-5 text-accent" />
-                <CardTitle>Follow-Up Call Tracking List ({patientReport?.followUps?.length || 0})</CardTitle>
-              </div>
-              <span className="text-xs text-text-muted">Patients requiring follow-up contact</span>
-            </CardHeader>
+          {/* Breakdown Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Payment Method Breakdown */}
+            <Card accentTop>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <PieChart className="w-5 h-5 text-primary" />
+                  <CardTitle>Payment Method Breakdown</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                {isLoading ? (
+                  <div className="p-8 text-center text-xs text-text-muted">Loading breakdown...</div>
+                ) : (
+                  <div className="divide-y divide-surface-border">
+                    {revenueReport?.paymentMethodBreakdown?.map((pm: any) => (
+                      <div key={pm.method} className="p-3.5 flex items-center justify-between hover:bg-surface/50 text-xs">
+                        <span className="font-bold text-text-primary">{pm.method}</span>
+                        <div className="text-right">
+                          <span className="font-bold text-emerald-700 block">₹{pm.amount?.toLocaleString()}</span>
+                          <span className="text-text-muted text-[11px]">{pm.count} txns ({pm.percentage}%)</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
+            {/* Doctor Revenue Attribution */}
+            <Card accentTop>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Stethoscope className="w-5 h-5 text-accent" />
+                  <CardTitle>Doctor Revenue Contribution</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                {isLoading ? (
+                  <div className="p-8 text-center text-xs text-text-muted">Loading doctor stats...</div>
+                ) : (
+                  <div className="divide-y divide-surface-border">
+                    {revenueReport?.doctorBreakdown?.map((doc: any) => (
+                      <div key={doc.doctorId} className="p-3.5 flex items-center justify-between hover:bg-surface/50 text-xs">
+                        <span className="font-bold text-text-primary block">{doc.doctorName}</span>
+                        <div className="text-right">
+                          <span className="font-bold text-primary block">Billed: ₹{doc.billed?.toLocaleString()}</span>
+                          <span className="text-emerald-700 font-semibold text-[11px]">Collected: ₹{doc.collected?.toLocaleString()}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Service-wise Revenue */}
+            <Card accentTop>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-emerald-600" />
+                  <CardTitle>Top Revenue Services</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                {isLoading ? (
+                  <div className="p-8 text-center text-xs text-text-muted">Loading services...</div>
+                ) : (
+                  <div className="divide-y divide-surface-border">
+                    {revenueReport?.serviceBreakdown?.slice(0, 5).map((srv: any) => (
+                      <div key={srv.description} className="p-3.5 flex items-center justify-between hover:bg-surface/50 text-xs">
+                        <div>
+                          <span className="font-bold text-text-primary block">{srv.description}</span>
+                          <span className="text-text-muted text-[11px]">{srv.itemType} • Qty {srv.totalQty}</span>
+                        </div>
+                        <span className="font-bold text-primary">₹{srv.totalRevenue?.toLocaleString()}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Invoices List Table */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between w-full">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-primary" />
+                  <CardTitle>Invoice Records ({revenueReport?.items?.length || 0})</CardTitle>
+                </div>
+              </div>
+            </CardHeader>
             <CardContent className="p-0 overflow-x-auto">
               {isLoading ? (
-                <div className="p-8 text-center text-xs text-text-muted">Loading follow-ups...</div>
-              ) : patientReport?.followUps?.length === 0 ? (
-                <div className="p-8 text-center text-xs text-text-muted">
-                  No pending or overdue patient follow-ups found for the selected range.
+                <div className="p-12 flex justify-center text-xs text-text-muted">
+                  <Loader2 className="w-5 h-5 animate-spin text-primary" />
                 </div>
+              ) : revenueReport?.items?.length === 0 ? (
+                <div className="p-8 text-center text-xs text-text-muted">No invoice records found in this range.</div>
               ) : (
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
                     <tr className="bg-surface border-b border-surface-border text-text-secondary font-semibold">
+                      <th className="p-3">Invoice Code</th>
+                      <th className="p-3">Date</th>
                       <th className="p-3">Patient</th>
-                      <th className="p-3">Phone</th>
                       <th className="p-3">Doctor</th>
-                      <th className="p-3">Chief Complaint</th>
-                      <th className="p-3">Follow-Up Date</th>
+                      <th className="p-3">Total Amount</th>
+                      <th className="p-3">Paid Amount</th>
+                      <th className="p-3">Due Balance</th>
                       <th className="p-3">Status</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-surface-border">
-                    {patientReport?.followUps?.map((f: any) => (
-                      <tr key={f.consultationId} className="hover:bg-surface/50">
-                        <td className="p-3 font-semibold text-text-primary">
-                          {f.patientName} <span className="text-text-muted font-mono font-normal">({f.patientCode})</span>
-                        </td>
-                        <td className="p-3 font-mono font-bold text-primary">{f.patientPhone}</td>
-                        <td className="p-3 text-text-secondary">{f.doctorName}</td>
-                        <td className="p-3 text-text-secondary">{f.diagnosis || 'General Checkup'}</td>
-                        <td className="p-3 font-medium">{f.followUpDate || 'Not Set'}</td>
+                    {revenueReport?.items?.map((inv: any) => (
+                      <tr key={inv.id} className="hover:bg-surface/50">
+                        <td className="p-3 font-mono font-bold text-primary">{inv.invoiceCode}</td>
+                        <td className="p-3 text-text-secondary">{inv.createdAt}</td>
+                        <td className="p-3 font-semibold text-text-primary">{inv.patientName}</td>
+                        <td className="p-3 text-text-secondary">{inv.doctorName}</td>
+                        <td className="p-3 font-bold text-text-primary">₹{inv.totalAmount?.toFixed(2)}</td>
+                        <td className="p-3 font-bold text-emerald-700">₹{inv.paidAmount?.toFixed(2)}</td>
+                        <td className="p-3 font-bold text-red-600">₹{inv.dueAmount?.toFixed(2)}</td>
                         <td className="p-3">
-                          {f.isOverdue ? (
-                            <Badge variant="danger" size="sm">Overdue Call</Badge>
-                          ) : (
-                            <Badge variant="warning" size="sm">Pending Call</Badge>
-                          )}
+                          <Badge variant={inv.status === 'PAID' ? 'success' : inv.status === 'PARTIALLY_PAID' ? 'warning' : 'default'} size="sm">
+                            {inv.status}
+                          </Badge>
                         </td>
                       </tr>
                     ))}
@@ -707,43 +766,129 @@ export default function ReportsPage() {
               )}
             </CardContent>
           </Card>
+        </div>
+      )}
 
-          {/* New Patient Registrations */}
+      {/* ============================================================= */}
+      {/* TAB 4: INVENTORY MOVEMENT REPORT VIEW (PHASE 7B) */}
+      {/* ============================================================= */}
+      {activeTab === 'inventory' && (
+        <div className="space-y-6">
+          {/* Inventory Summary Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+            <Card className="border-l-4 border-l-accent hover:border-amber-400 transition-colors">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-50 text-accent border border-amber-200 flex items-center justify-center shrink-0">
+                  <Package className="w-5 h-5" />
+                </div>
+                <div>
+                  <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">
+                    Total Inventory Value
+                  </span>
+                  <span className="text-2xl font-bold text-primary">
+                    {isLoading ? '...' : `₹${inventoryReport?.summary?.totalInventoryValue?.toLocaleString() || 0}`}
+                  </span>
+                  <span className="text-[10px] text-text-muted block">Reused Phase 5 cost valuation</span>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:border-primary/40 transition-colors">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 text-primary border border-blue-100 flex items-center justify-center shrink-0">
+                  <BarChart3 className="w-5 h-5" />
+                </div>
+                <div>
+                  <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">
+                    Medicines Count
+                  </span>
+                  <span className="text-2xl font-bold text-text-primary">
+                    {isLoading ? '...' : inventoryReport?.summary?.totalMedicinesCount || 0}
+                  </span>
+                  <span className="text-[10px] text-text-muted block">Active formulary items</span>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:border-red-300 transition-colors">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-rose-50 text-red-600 border border-rose-200 flex items-center justify-center shrink-0">
+                  <AlertTriangle className="w-5 h-5" />
+                </div>
+                <div>
+                  <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">
+                    Low Stock Items
+                  </span>
+                  <span className="text-2xl font-bold text-red-600">
+                    {isLoading ? '...' : inventoryReport?.summary?.lowStockCount || 0}
+                  </span>
+                  <span className="text-[10px] text-text-muted block">At or below minimum threshold</span>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:border-emerald-300 transition-colors">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center shrink-0">
+                  <CheckCircle2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">
+                    Items Dispensed
+                  </span>
+                  <span className="text-2xl font-bold text-emerald-700">
+                    {isLoading ? '...' : inventoryReport?.summary?.totalItemsDispensed || 0}
+                  </span>
+                  <span className="text-[10px] text-text-muted block">Total units dispensed in range</span>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Stock Movement Ledger Table */}
           <Card>
             <CardHeader>
-              <div className="flex items-center gap-2">
-                <UserPlus className="w-5 h-5 text-primary" />
-                <CardTitle>New Registered Patients ({patientReport?.newPatients?.length || 0})</CardTitle>
+              <div className="flex items-center justify-between w-full">
+                <div className="flex items-center gap-2">
+                  <RefreshCw className="w-5 h-5 text-primary" />
+                  <CardTitle>Stock Movement Ledger ({inventoryReport?.movements?.length || 0})</CardTitle>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="p-0 overflow-x-auto">
               {isLoading ? (
-                <div className="p-8 text-center text-xs text-text-muted">Loading registrations...</div>
-              ) : patientReport?.newPatients?.length === 0 ? (
-                <div className="p-8 text-center text-xs text-text-muted">
-                  No new patient registrations recorded within this date range.
+                <div className="p-12 flex justify-center text-xs text-text-muted">
+                  <Loader2 className="w-5 h-5 animate-spin text-primary" />
                 </div>
+              ) : inventoryReport?.movements?.length === 0 ? (
+                <div className="p-8 text-center text-xs text-text-muted">No stock movement transactions recorded in this range.</div>
               ) : (
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
                     <tr className="bg-surface border-b border-surface-border text-text-secondary font-semibold">
-                      <th className="p-3">Code</th>
-                      <th className="p-3">Name</th>
-                      <th className="p-3">Phone</th>
-                      <th className="p-3">Gender / Age</th>
-                      <th className="p-3">Registered Date</th>
+                      <th className="p-3">Date</th>
+                      <th className="p-3">Medicine</th>
+                      <th className="p-3">Batch Number</th>
+                      <th className="p-3">Transaction Type</th>
+                      <th className="p-3">Quantity</th>
+                      <th className="p-3">Performed By</th>
+                      <th className="p-3">Notes / Reason</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-surface-border">
-                    {patientReport?.newPatients?.map((p: any) => (
-                      <tr key={p.id} className="hover:bg-surface/50">
-                        <td className="p-3 font-mono font-bold text-primary">{p.patientCode}</td>
-                        <td className="p-3 font-semibold text-text-primary">{p.name}</td>
-                        <td className="p-3 text-text-secondary">{p.phone}</td>
-                        <td className="p-3 text-text-secondary">
-                          {p.gender || 'N/A'} {p.age ? `(${p.age} yrs)` : ''}
+                    {inventoryReport?.movements?.map((m: any) => (
+                      <tr key={m.id} className="hover:bg-surface/50">
+                        <td className="p-3 text-text-secondary">{m.date}</td>
+                        <td className="p-3 font-semibold text-text-primary">{m.medicineName}</td>
+                        <td className="p-3 font-mono text-[11px]">{m.batchNumber}</td>
+                        <td className="p-3 font-bold text-primary">{m.type}</td>
+                        <td className="p-3 font-bold">
+                          <span className={m.direction === 'IN' ? 'text-emerald-700' : 'text-red-600'}>
+                            {m.direction === 'IN' ? `+${m.quantity}` : `-${m.quantity}`}
+                          </span>
                         </td>
-                        <td className="p-3 text-text-muted">{p.registeredOn}</td>
+                        <td className="p-3 text-text-secondary">{m.performedBy}</td>
+                        <td className="p-3 text-text-muted text-[11px]">{m.reason}</td>
                       </tr>
                     ))}
                   </tbody>

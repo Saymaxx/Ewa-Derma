@@ -44,9 +44,11 @@ export default function DoctorsPage() {
     setIsLoading(true);
     try {
       const res = await api.get('/doctors');
-      setDoctors(res.data.data || []);
+      const rawDoctors = res?.data?.data ?? res?.data;
+      setDoctors(Array.isArray(rawDoctors) ? rawDoctors : []);
     } catch {
       showToast('Failed to load doctors roster', 'error');
+      setDoctors([]);
     } finally {
       setIsLoading(false);
     }
@@ -59,10 +61,10 @@ export default function DoctorsPage() {
   const openEditModal = (doc: any) => {
     setEditDoctor(doc);
     setEditForm({
-      specialization: doc.specialization,
+      specialization: doc.specialization || '',
       qualification: doc.qualification || '',
       regNumber: doc.regNumber || '',
-      consultationFee: Number(doc.consultationFee),
+      consultationFee: Number(doc.consultationFee) || 500,
       workingDays: doc.workingDays || 'Mon,Tue,Wed,Thu,Fri,Sat,Sun',
       workingHours: doc.workingHours || '10:00-19:00',
     });
@@ -75,7 +77,7 @@ export default function DoctorsPage() {
     setIsSubmitting(true);
     try {
       await api.patch(`/doctors/${editDoctor.id}`, editForm);
-      showToast('Doctor profile and schedule updated successfully', 'success');
+      showToast('Doctor profile updated successfully', 'success');
       setEditDoctor(null);
       fetchDoctors();
     } catch (err: any) {
@@ -86,6 +88,7 @@ export default function DoctorsPage() {
   };
 
   const isAdmin = hasRole('ADMIN');
+  const doctorList = Array.isArray(doctors) ? doctors : [];
 
   return (
     <div className="space-y-6">
@@ -104,7 +107,7 @@ export default function DoctorsPage() {
         </div>
 
         <Badge variant="primary" size="md">
-          {doctors.length} Active Doctors
+          {doctorList.length} Active Doctors
         </Badge>
       </div>
 
@@ -116,7 +119,7 @@ export default function DoctorsPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {doctors.map((doc) => (
+          {doctorList.map((doc) => (
             <Card key={doc.id} accentTop>
               <CardHeader>
                 <div className="flex items-center gap-3">

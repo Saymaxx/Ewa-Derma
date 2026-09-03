@@ -13,12 +13,16 @@ import {
   FileText,
   CreditCard,
   Package,
+  PackagePlus,
+  ShoppingCart,
+  Sliders,
   FileSpreadsheet,
   Settings,
   ShieldCheck,
   Palette,
   Clock,
   UserCog,
+  Bell,
 } from 'lucide-react';
 
 interface NavItem {
@@ -66,23 +70,53 @@ export const Sidebar: React.FC = () => {
     },
     {
       label: 'Billing & Invoices',
-      href: '#',
+      href: '/invoices',
       icon: <CreditCard className="w-5 h-5" />,
       roles: ['ADMIN', 'RECEPTIONIST'],
     },
     // Inventory items
     {
-      label: 'Pharmacy & Stock',
-      href: '#',
+      label: 'Pharmacy Formulary',
+      href: '/medicines',
       icon: <Package className="w-5 h-5" />,
       roles: ['ADMIN', 'INVENTORY_MANAGER'],
     },
-    // Admin only
+    {
+      label: 'Add New Medicine',
+      href: '/medicines/new',
+      icon: <PackagePlus className="w-5 h-5" />,
+      roles: ['ADMIN', 'INVENTORY_MANAGER'],
+    },
+    {
+      label: 'Stock Purchases (In)',
+      href: '/inventory/purchases',
+      icon: <ShoppingCart className="w-5 h-5" />,
+      roles: ['ADMIN', 'INVENTORY_MANAGER'],
+    },
+    {
+      label: 'Stock Adjustments',
+      href: '/inventory/adjustments',
+      icon: <Sliders className="w-5 h-5" />,
+      roles: ['ADMIN', 'INVENTORY_MANAGER'],
+    },
+    {
+      label: 'Expiry Tracking',
+      href: '/inventory/expiry',
+      icon: <Clock className="w-5 h-5" />,
+      roles: ['ADMIN', 'INVENTORY_MANAGER'],
+    },
+    // Reports
     {
       label: 'Reports & Analytics',
       href: '/reports',
       icon: <FileSpreadsheet className="w-5 h-5" />,
-      roles: ['ADMIN', 'RECEPTIONIST', 'DOCTOR'],
+      roles: ['ADMIN', 'RECEPTIONIST', 'DOCTOR', 'INVENTORY_MANAGER'],
+    },
+    {
+      label: 'Notification Log',
+      href: '/notifications',
+      icon: <Bell className="w-5 h-5" />,
+      roles: ['ADMIN'],
     },
     {
       label: 'Clinic Settings',

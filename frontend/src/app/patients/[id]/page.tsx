@@ -32,10 +32,13 @@ import {
   CreditCard,
   Download,
   Eye,
+  Lock,
+  Plus,
   Loader2,
   HeartPulse,
-  Lock,
 } from 'lucide-react';
+import CreateInvoiceModal from '@/components/billing/CreateInvoiceModal';
+import InvoiceDetailModal from '@/components/billing/InvoiceDetailModal';
 
 export default function PatientProfilePage() {
   const params = useParams();
@@ -49,18 +52,24 @@ export default function PatientProfilePage() {
   const [prescriptions, setPrescriptions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
+  const [patientInvoices, setPatientInvoices] = useState<any[]>([]);
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [isCreateInvoiceOpen, setIsCreateInvoiceOpen] = useState(false);
 
   const fetchPatientData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [ptRes, consRes, rxRes] = await Promise.all([
+      const [ptRes, consRes, rxRes, invRes] = await Promise.all([
         api.get(`/patients/${id}`),
         api.get(`/consultations/patient/${id}`).catch(() => ({ data: { data: [] } })),
         api.get(`/prescriptions/patient/${id}`).catch(() => ({ data: { data: [] } })),
+        api.get('/invoices', { params: { patientId: id } }).catch(() => ({ data: { data: [] } })),
       ]);
       setPatient(ptRes.data.data);
       setConsultations(consRes.data.data || []);
       setPrescriptions(rxRes.data.data || []);
+      setPatientInvoices(invRes.data.data || []);
     } catch {
       showToast('Patient record not found', 'error');
       router.push('/patients');
@@ -106,7 +115,7 @@ export default function PatientProfilePage() {
       icon: <Pill className="w-4 h-4" />,
       count: prescriptions.length,
     },
-    { id: 'billing', label: 'Billing & Invoices', icon: <CreditCard className="w-4 h-4" /> },
+    { id: 'billing', label: 'Billing & Invoices', icon: <CreditCard className="w-4 h-4" />, count: patientInvoices.length },
   ];
 
   return (
@@ -526,21 +535,115 @@ export default function PatientProfilePage() {
             </div>
           )}
 
-          {/* 5. BILLING & INVOICES (PHASE 4 PLACEHOLDER) */}
+          {/* 5. BILLING & INVOICES TAB (PHASE 4 LIVE DATA) */}
           {activeTab === 'billing' && (
-            <div className="p-12 text-center space-y-3 bg-surface rounded-xl border border-surface-border animate-in fade-in duration-150">
-              <CreditCard className="w-12 h-12 text-status-success/50 mx-auto" />
-              <div className="space-y-1">
-                <h4 className="text-base font-bold text-text-primary">Invoices & Payment Receipts</h4>
-                <p className="text-xs text-text-secondary max-w-md mx-auto">
-                  Service bills (Consultation, Laser, PRP, Peel), payments (Cash, UPI, Card), and payment receipts will be generated here in <strong>Phase 4 (Billing & Payments)</strong>.
-                </p>
+            <div className="space-y-6 animate-in fade-in duration-150">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-text-secondary">
+                  Invoice & Payment History ({patientInvoices.length})
+                </h3>
+                {hasRole(['ADMIN', 'RECEPTIONIST']) && (
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    onClick={() => setIsCreateInvoiceOpen(true)}
+                    leftIcon={<Plus className="w-3.5 h-3.5" />}
+                  >
+                    Generate New Invoice
+                  </Button>
+                )}
               </div>
-              <Badge variant="accent" size="sm">Phase 4 Feature</Badge>
+
+              {patientInvoices.length === 0 ? (
+                <div className="p-12 text-center space-y-3 bg-surface rounded-xl border border-surface-border text-text-secondary text-xs">
+                  <CreditCard className="w-10 h-10 text-primary/40 mx-auto" />
+                  <p className="font-semibold text-text-primary">No invoices generated yet</p>
+                  <p className="text-[11px]">Generate a new invoice for consultation fees, procedure services, or prescribed medicines.</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Invoice Code</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead className="text-right">Total (₹)</TableHead>
+                      <TableHead className="text-right">Paid (₹)</TableHead>
+                      <TableHead className="text-right">Due (₹)</TableHead>
+                      <TableHead className="text-center">Status</TableHead>
+                      <TableHead className="text-center">Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {patientInvoices.map((inv) => (
+                      <TableRow key={inv.id}>
+                        <TableCell className="font-mono font-bold text-primary">
+                          {inv.invoiceCode}
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {inv.createdAt?.split('T')[0]}
+                        </TableCell>
+                        <TableCell className="text-right font-bold text-text-primary">
+                          ₹{Number(inv.totalAmount).toFixed(2)}
+                        </TableCell>
+                        <TableCell className="text-right font-semibold text-emerald-700">
+                          ₹{Number(inv.paidAmount).toFixed(2)}
+                        </TableCell>
+                        <TableCell className="text-right font-bold text-red-600">
+                          ₹{Number(inv.dueAmount).toFixed(2)}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge
+                            variant={
+                              inv.status === 'PAID'
+                                ? 'success'
+                                : inv.status === 'PARTIALLY_PAID'
+                                ? 'accent'
+                                : inv.status === 'CANCELLED' || inv.status === 'REFUNDED'
+                                ? 'danger'
+                                : 'info'
+                            }
+                            size="sm"
+                            dot
+                          >
+                            {inv.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setSelectedInvoiceId(inv.id);
+                              setIsDetailOpen(true);
+                            }}
+                          >
+                            Inspect / Pay
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </div>
           )}
         </CardContent>
       </Card>
+
+      <CreateInvoiceModal
+        isOpen={isCreateInvoiceOpen}
+        onClose={() => setIsCreateInvoiceOpen(false)}
+        onSuccess={fetchPatientData}
+        initialPatientId={patient.id}
+        initialPatientName={`${patient.firstName} ${patient.lastName}`}
+      />
+
+      <InvoiceDetailModal
+        invoiceId={selectedInvoiceId}
+        isOpen={isDetailOpen}
+        onClose={() => setIsDetailOpen(false)}
+        onRefresh={fetchPatientData}
+      />
     </div>
   );
 }
