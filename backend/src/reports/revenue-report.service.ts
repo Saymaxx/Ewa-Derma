@@ -32,78 +32,76 @@ export class RevenueReportService {
       scopedDoctorId = userContext.doctorId;
     }
 
-    // 1. Fetch Invoices created within date range
-    const invoices = await this.prisma.invoice.findMany({
-      where: {
-        createdAt: { gte: start, lte: end },
-        ...(scopedDoctorId
-          ? {
-              OR: [
-                { appointment: { doctorId: scopedDoctorId } },
-                { consultation: { doctorId: scopedDoctorId } },
-              ],
-            }
-          : {}),
-      },
-      include: {
-        patient: { select: { id: true, patientCode: true, firstName: true, lastName: true, phone: true } },
-        items: true,
-        payments: true,
-        appointment: { select: { id: true, doctorId: true, doctor: { select: { id: true, user: { select: { firstName: true, lastName: true } } } } } },
-        consultation: { select: { id: true, doctorId: true, doctor: { select: { id: true, user: { select: { firstName: true, lastName: true } } } } } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    // 2. Fetch Payments recorded within date range
-    const payments = await this.prisma.payment.findMany({
-      where: {
-        createdAt: { gte: start, lte: end },
-        ...(scopedDoctorId
-          ? {
-              invoice: {
+    // Fetch Invoices, Payments, and Refunds in parallel
+    const [invoices, payments, refunds] = await Promise.all([
+      this.prisma.invoice.findMany({
+        where: {
+          createdAt: { gte: start, lte: end },
+          ...(scopedDoctorId
+            ? {
                 OR: [
                   { appointment: { doctorId: scopedDoctorId } },
                   { consultation: { doctorId: scopedDoctorId } },
                 ],
-              },
-            }
-          : {}),
-        ...(query.paymentMethod
-          ? { paymentMethod: query.paymentMethod as any }
-          : {}),
-      },
-      include: {
-        invoice: {
-          select: {
-            id: true,
-            invoiceCode: true,
-            patient: { select: { firstName: true, lastName: true, patientCode: true } },
-            appointment: { select: { doctor: { select: { id: true, user: { select: { firstName: true, lastName: true } } } } } },
-            consultation: { select: { doctor: { select: { id: true, user: { select: { firstName: true, lastName: true } } } } } },
-          },
+              }
+            : {}),
         },
-      },
-    });
-
-    // 3. Fetch Refunds issued within date range
-    const refunds = await this.prisma.refund.findMany({
-      where: {
-        createdAt: { gte: start, lte: end },
-        ...(scopedDoctorId
-          ? {
-              payment: {
+        include: {
+          patient: { select: { id: true, patientCode: true, firstName: true, lastName: true, phone: true } },
+          items: true,
+          payments: true,
+          appointment: { select: { id: true, doctorId: true, doctor: { select: { id: true, user: { select: { firstName: true, lastName: true } } } } } },
+          consultation: { select: { id: true, doctorId: true, doctor: { select: { id: true, user: { select: { firstName: true, lastName: true } } } } } },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.payment.findMany({
+        where: {
+          createdAt: { gte: start, lte: end },
+          ...(scopedDoctorId
+            ? {
                 invoice: {
                   OR: [
                     { appointment: { doctorId: scopedDoctorId } },
                     { consultation: { doctorId: scopedDoctorId } },
                   ],
                 },
-              },
-            }
-          : {}),
-      },
-    });
+              }
+            : {}),
+          ...(query.paymentMethod
+            ? { paymentMethod: query.paymentMethod as any }
+            : {}),
+        },
+        include: {
+          invoice: {
+            select: {
+              id: true,
+              invoiceCode: true,
+              patient: { select: { firstName: true, lastName: true, patientCode: true } },
+              appointment: { select: { doctor: { select: { id: true, user: { select: { firstName: true, lastName: true } } } } } },
+              consultation: { select: { doctor: { select: { id: true, user: { select: { firstName: true, lastName: true } } } } } },
+            },
+          },
+        },
+      }),
+      this.prisma.refund.findMany({
+        where: {
+          createdAt: { gte: start, lte: end },
+          ...(scopedDoctorId
+            ? {
+                payment: {
+                  invoice: {
+                    OR: [
+                      { appointment: { doctorId: scopedDoctorId } },
+                      { consultation: { doctorId: scopedDoctorId } },
+                    ],
+                  },
+                },
+              }
+            : {}),
+        },
+      }),
+    ]);
 
     // Calculate Core Metrics
     const grossPaymentsReceived = payments.reduce((acc, p) => acc + Number(p.amount), 0);

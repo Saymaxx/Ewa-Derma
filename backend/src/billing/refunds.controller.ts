@@ -14,10 +14,6 @@ export class RefundsController {
   @Roles('ADMIN')
   async create(@Body() dto: CreateRefundDto, @Req() req: any) {
     const userId = req.user?.id || req.user?.sub;
-    const data = await this.refundsService.create(dto, userId);
-    return {
-      message: 'Refund issued successfully',
-      data,
-    };
+    return this.refundsService.create(dto, userId);
   }
 }

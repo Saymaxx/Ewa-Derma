@@ -30,6 +30,7 @@ import {
   Loader2,
   FileText,
 } from 'lucide-react';
+import { useDebouncedValue } from '@/lib/useDebouncedValue';
 
 export default function PatientsPage() {
   const { user, hasRole } = useAuth();
@@ -39,6 +40,7 @@ export default function PatientsPage() {
   const [patients, setPatients] = useState<any[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
+  const debouncedQuery = useDebouncedValue(searchQuery, 300);
   const [isLoading, setIsLoading] = useState(true);
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -64,25 +66,31 @@ export default function PatientsPage() {
     setIsLoading(true);
     try {
       const res = await api.get('/patients', {
-        params: { search: query, page: 1, limit: 50 },
+        params: { search: query || undefined, limit: 50 },
       });
-      setPatients(res.data.data.items || []);
-      setTotalCount(res.data.data.total || 0);
+
+      const data = res.data.data;
+      if (data && Array.isArray(data.items)) {
+        setPatients(data.items);
+        setTotalCount(data.total);
+      } else if (Array.isArray(data)) {
+        setPatients(data);
+        setTotalCount(data.length);
+      } else {
+        setPatients([]);
+        setTotalCount(0);
+      }
     } catch (err: any) {
-      showToast('Failed to load patient records', 'error');
+      showToast('Failed to fetch patient directory', 'error');
+      setPatients([]);
     } finally {
       setIsLoading(false);
     }
   }, [showToast]);
 
-  // Debounced search (300ms)
   useEffect(() => {
-    const handler = setTimeout(() => {
-      fetchPatients(searchQuery);
-    }, 300);
-
-    return () => clearTimeout(handler);
-  }, [searchQuery, fetchPatients]);
+    fetchPatients(debouncedQuery);
+  }, [fetchPatients, debouncedQuery]);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -47,30 +47,17 @@ export default function DashboardPage() {
   const fetchDashboardStats = useCallback(async () => {
     setIsLoading(true);
     try {
-      const today = new Date().toISOString().split('T')[0];
-      const [ptsRes, todayAptsRes, allAptsRes, docsRes] = await Promise.all([
-        api.get('/patients', { params: { limit: 1 } }),
-        api.get('/appointments', { params: { date: today } }),
-        api.get('/appointments'),
-        api.get('/doctors', { params: { onlyActive: true } }),
-      ]);
-
-      const todayList = todayAptsRes.data.data || [];
-      const checkedIn = todayList.filter(
-        (a: any) =>
-          a.status === 'CHECKED_IN' ||
-          a.status === 'WAITING' ||
-          a.status === 'IN_CONSULTATION',
-      ).length;
+      const statsRes = await api.get('/appointments/stats');
+      const data = statsRes.data?.data || statsRes.data || {};
 
       setStats({
-        totalPatients: ptsRes.data.data?.total || 0,
-        todayAppointments: todayList.length,
-        checkedInCount: checkedIn,
-        activeDoctors: (docsRes.data.data || []).length,
+        totalPatients: data.totalPatients || 0,
+        todayAppointments: data.todayAppointments || 0,
+        checkedInCount: data.checkedInCount || 0,
+        activeDoctors: data.activeDoctors || 0,
       });
 
-      setAllAppointments(allAptsRes.data.data || []);
+      setAllAppointments(data.recent7DaysAppointments || []);
     } catch {
       // Fallback silently if stats fail
     } finally {
@@ -132,12 +119,12 @@ export default function DashboardPage() {
                 Pharmacy & Inventory Management
               </h3>
               <p className="text-xs text-text-secondary leading-relaxed">
-                You are logged in with the <strong>Pharmacy Manager</strong> role. Medicine stock catalog, batch expiry tracking, and inventory restocking controls will be enabled during the Phase 5 Inventory release.
+                You are logged in with the <strong>Pharmacy Manager</strong> role. Access medicine stock catalog, batch expiry tracking, and inventory restocking controls.
               </p>
             </div>
             <div className="pt-2">
-              <Badge variant="warning" size="md">
-                Phase 5 Module Standing By
+              <Badge variant="accent" size="md">
+                Pharmacy Module Active
               </Badge>
             </div>
           </CardContent>

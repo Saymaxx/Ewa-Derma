@@ -281,6 +281,7 @@ model Patient {
   @@index([patientCode])
   @@index([phone])
   @@index([firstName, lastName])
+  @@index([createdAt])
   @@map("patients")
 }
 
@@ -372,6 +373,7 @@ model Appointment {
   @@index([patientId])
   @@index([doctorId, appointmentDate])
   @@index([appointmentDate, status])
+  @@index([doctorId, appointmentDate, status])
   @@map("appointments")
 }
 
@@ -603,6 +605,7 @@ model InventoryTransaction {
   @@index([medicineId])
   @@index([batchId])
   @@index([createdAt])
+  @@index([medicineId, transactionType])
   @@map("inventory_transactions")
 }
 
@@ -675,6 +678,7 @@ model Invoice {
   @@index([patientId])
   @@index([appointmentId])
   @@index([status])
+  @@index([createdAt])
   @@map("invoices")
 }
 
@@ -719,6 +723,7 @@ model Payment {
   refunds    Refund[]
 
   @@index([invoiceId])
+  @@index([createdAt])
   @@map("payments")
 }
 
@@ -734,6 +739,7 @@ model Refund {
   payment Payment @relation(fields: [paymentId], references: [id])
 
   @@index([paymentId])
+  @@index([createdAt])
   @@map("refunds")
 }
 

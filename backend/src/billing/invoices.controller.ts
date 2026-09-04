@@ -9,7 +9,6 @@ import {
   UseGuards,
   Req,
   Res,
-  NotFoundException,
 } from '@nestjs/common';
 import { Response } from 'express';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
@@ -39,31 +38,25 @@ export class InvoicesController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
   ) {
-    const data = await this.invoicesService.findAll({
+    return this.invoicesService.findAll({
       patientId,
       status,
       startDate,
       endDate,
     });
-    return { data };
   }
 
   @Get(':id')
   @Roles('ADMIN', 'RECEPTIONIST', 'DOCTOR')
   async findOne(@Param('id') id: string) {
-    const data = await this.invoicesService.findOne(id);
-    return { data };
+    return this.invoicesService.findOne(id);
   }
 
   @Post()
   @Roles('ADMIN', 'RECEPTIONIST')
   async create(@Body() dto: CreateInvoiceDto, @Req() req: any) {
     const userId = req.user?.id || req.user?.sub;
-    const data = await this.invoicesService.create(dto, userId);
-    return {
-      message: 'Invoice created successfully',
-      data,
-    };
+    return this.invoicesService.create(dto, userId);
   }
 
   @Patch(':id/status')
@@ -74,11 +67,7 @@ export class InvoicesController {
     @Req() req: any,
   ) {
     const userId = req.user?.id || req.user?.sub;
-    const data = await this.invoicesService.updateStatus(id, dto, userId);
-    return {
-      message: 'Invoice status updated successfully',
-      data,
-    };
+    return this.invoicesService.updateStatus(id, dto, userId);
   }
 
   @Get(':id/pdf')

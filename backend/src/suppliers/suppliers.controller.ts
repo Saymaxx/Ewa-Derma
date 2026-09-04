@@ -20,8 +20,7 @@ export class SuppliersController {
   @ApiResponse({ status: 200, description: 'List of suppliers' })
   async findAll(@Query('search') search?: string, @Query('activeOnly') activeOnly?: string) {
     const isOnlyActive = activeOnly === 'true';
-    const items = await this.suppliersService.findAll(search, isOnlyActive);
-    return { message: 'Suppliers retrieved successfully', data: items };
+    return this.suppliersService.findAll(search, isOnlyActive);
   }
 
   @Get(':id')
@@ -29,8 +28,7 @@ export class SuppliersController {
   @ApiOperation({ summary: 'Get details of a single supplier' })
   @ApiResponse({ status: 200, description: 'Supplier details retrieved' })
   async findOne(@Param('id') id: string) {
-    const item = await this.suppliersService.findOne(id);
-    return { message: 'Supplier details retrieved', data: item };
+    return this.suppliersService.findOne(id);
   }
 
   @Post()
@@ -38,8 +36,7 @@ export class SuppliersController {
   @ApiOperation({ summary: 'Create a new supplier record' })
   @ApiResponse({ status: 201, description: 'Supplier created successfully' })
   async create(@Body() dto: CreateSupplierDto) {
-    const item = await this.suppliersService.create(dto);
-    return { message: 'Supplier created successfully', data: item };
+    return this.suppliersService.create(dto);
   }
 
   @Patch(':id')
@@ -47,7 +44,6 @@ export class SuppliersController {
   @ApiOperation({ summary: 'Update an existing supplier' })
   @ApiResponse({ status: 200, description: 'Supplier updated successfully' })
   async update(@Param('id') id: string, @Body() dto: UpdateSupplierDto) {
-    const item = await this.suppliersService.update(id, dto);
-    return { message: 'Supplier updated successfully', data: item };
+    return this.suppliersService.update(id, dto);
   }
 }

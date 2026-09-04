@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
+import { getCachedData, setCachedData } from '@/lib/cache';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -86,32 +87,52 @@ export default function CreateInvoiceModal({
         })
         .catch(() => setPatients([]));
 
-      // Load services safely
-      api
-        .get('/services')
-        .then((res) => {
-          const raw = res?.data?.data ?? res?.data;
-          const svcs = Array.isArray(raw) ? raw : [];
-          setServices(svcs);
+      // Load services safely (cached)
+      const cachedServices = getCachedData<any[]>('services_list');
+      if (cachedServices) {
+        setServices(cachedServices);
+        if (cachedServices.length > 0) {
+          const cons = cachedServices.find((s: any) => s.name?.includes('Consultation')) || cachedServices[0];
+          setItems([
+            {
+              id: '1',
+              itemType: 'SERVICE',
+              serviceId: cons.id,
+              description: cons.name,
+              quantity: 1,
+              unitPrice: Number(cons.basePrice),
+              discount: 0,
+              taxRate: 0,
+            },
+          ]);
+        }
+      } else {
+        api
+          .get('/services')
+          .then((res) => {
+            const raw = res?.data?.data ?? res?.data;
+            const svcs = Array.isArray(raw) ? raw : [];
+            setCachedData('services_list', svcs, 300000); // 5 min TTL
+            setServices(svcs);
 
-          // Default first line item to Consultation service if empty
-          if (svcs.length > 0) {
-            const cons = svcs.find((s: any) => s.name?.includes('Consultation')) || svcs[0];
-            setItems([
-              {
-                id: '1',
-                itemType: 'SERVICE',
-                serviceId: cons.id,
-                description: cons.name,
-                quantity: 1,
-                unitPrice: Number(cons.basePrice),
-                discount: 0,
-                taxRate: 0,
-              },
-            ]);
-          }
-        })
-        .catch(() => setServices([]));
+            if (svcs.length > 0) {
+              const cons = svcs.find((s: any) => s.name?.includes('Consultation')) || svcs[0];
+              setItems([
+                {
+                  id: '1',
+                  itemType: 'SERVICE',
+                  serviceId: cons.id,
+                  description: cons.name,
+                  quantity: 1,
+                  unitPrice: Number(cons.basePrice),
+                  discount: 0,
+                  taxRate: 0,
+                },
+              ]);
+            }
+          })
+          .catch(() => setServices([]));
+      }
     }
   }, [isOpen, initialPatientId]);
 

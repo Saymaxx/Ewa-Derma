@@ -32,27 +32,50 @@ export class InventoryReportService {
     const end = new Date(endDateStr);
     end.setHours(23, 59, 59, 999);
 
-    // 1. Fetch Medicines Catalog & Computed Stock (Reused Phase 5 logic)
-    const medicines = await this.prisma.medicine.findMany({
-      where: {
-        isActive: true,
-        ...(query.medicineId ? { id: query.medicineId } : {}),
-        ...(query.categoryId ? { categoryId: query.categoryId } : {}),
-      },
-      include: {
-        category: { select: { name: true } },
-        batches: true,
-        transactions: true,
-      },
-      orderBy: { name: 'asc' },
+    // 1. Fetch Medicines Catalog, Batches & Grouped Stock Aggregations in parallel
+    const [medicines, allBatches, medStockAggs, batchStockAggs] = await Promise.all([
+      this.prisma.medicine.findMany({
+        where: {
+          isActive: true,
+          ...(query.medicineId ? { id: query.medicineId } : {}),
+          ...(query.categoryId ? { categoryId: query.categoryId } : {}),
+        },
+        include: {
+          category: { select: { name: true } },
+        },
+        orderBy: { name: 'asc' },
+      }),
+      this.prisma.medicineBatch.findMany({
+        where: { isVoid: false },
+        include: {
+          medicine: { select: { name: true, category: { select: { name: true } } } },
+        },
+        orderBy: { expiryDate: 'asc' },
+      }),
+      this.prisma.inventoryTransaction.groupBy({
+        by: ['medicineId'],
+        _sum: { quantity: true },
+      }),
+      this.prisma.inventoryTransaction.groupBy({
+        by: ['batchId'],
+        where: { batchId: { not: null } },
+        _sum: { quantity: true },
+      }),
+    ]);
+
+    const medStockMap = new Map<string, number>();
+    medStockAggs.forEach((m) => medStockMap.set(m.medicineId, m._sum.quantity || 0));
+
+    const batchStockMap = new Map<string, number>();
+    batchStockAggs.forEach((b) => {
+      if (b.batchId) batchStockMap.set(b.batchId, b._sum.quantity || 0);
     });
 
     let totalInventoryValue = 0;
     let lowStockCount = 0;
 
     const currentStockItems = medicines.map((med) => {
-      // Reusing Phase 5 stock transaction ledger math
-      const computedStock = med.transactions.reduce((sum, t) => sum + t.quantity, 0);
+      const computedStock = medStockMap.get(med.id) || 0;
       const safeStock = Math.max(0, computedStock);
 
       const unitCost = Number((med as any).purchasePrice || med.unitPrice);
@@ -77,24 +100,15 @@ export class InventoryReportService {
       };
     });
 
-    // 2. Expiring / Expired Batches (Reused Phase 5 alert logic)
+    // 2. Expiring / Expired Batches
     const now = new Date();
     const in30Days = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
     const in60Days = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000);
 
-    const allBatches = await this.prisma.medicineBatch.findMany({
-      where: { isVoid: false },
-      include: {
-        medicine: { select: { name: true, category: { select: { name: true } } } },
-        transactions: true,
-      },
-      orderBy: { expiryDate: 'asc' },
-    });
-
     const expiringBatches = allBatches
       .map((b) => {
-        const batchRemaining = (b.transactions && b.transactions.length > 0)
-          ? b.transactions.reduce((sum, t) => sum + t.quantity, 0)
+        const batchRemaining = batchStockMap.has(b.id)
+          ? (batchStockMap.get(b.id) || 0)
           : b.initialQuantity;
 
         if (batchRemaining <= 0) return null;

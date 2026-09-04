@@ -34,6 +34,7 @@ describe('Inventory Module Unit Tests', () => {
       create: jest.fn(),
       findMany: jest.fn(),
       aggregate: jest.fn(),
+      groupBy: jest.fn().mockResolvedValue([]),
     },
     prescription: {
       findUnique: jest.fn(),
@@ -225,6 +226,10 @@ describe('Inventory Module Unit Tests', () => {
           transactions: [{ quantity: 10 }],
         },
       ]);
+
+      mockPrismaService.inventoryTransaction.groupBy
+        .mockResolvedValueOnce([{ medicineId: 'm-low', _sum: { quantity: 5 } }])
+        .mockResolvedValueOnce([{ batchId: 'b-exp', _sum: { quantity: 10 } }]);
 
       const res = await alertsService.getInventoryAlerts();
 

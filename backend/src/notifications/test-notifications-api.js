@@ -60,8 +60,8 @@ async function runTest() {
     { channel: 'EMAIL', recipient: 'patient.invoice@example.com' },
     recToken,
   );
-  const sendInvoiceEmail = sendInvoiceEmailRes.data.data || sendInvoiceEmailRes.data;
-  console.log(`Email Status: ${sendInvoiceEmail.status} | Message: '${sendInvoiceEmailRes.data.message}'`);
+  const sendInvoiceEmail = sendInvoiceEmailRes.data;
+  console.log(`Email Status: ${sendInvoiceEmail.status}`);
 
   console.log('\n=== 3. SEND INVOICE VIA WHATSAPP (HONEST FAILURE TEST) ===');
   const sendInvoiceWARes = await request(
@@ -70,15 +70,15 @@ async function runTest() {
     { channel: 'WHATSAPP', recipient: '9876543210' },
     recToken,
   );
-  const sendInvoiceWA = sendInvoiceWARes.data.data || sendInvoiceWARes.data;
+  const sendInvoiceWA = sendInvoiceWARes.data;
   console.log(`WhatsApp Status: ${sendInvoiceWA.status} | Error Detail: '${sendInvoiceWA.errorLog}'`);
   console.log('✅ VERIFICATION: WhatsApp honestly reported failure without faking success!');
 
   console.log('\n=== 4. SEND PRESCRIPTION VIA EMAIL (PDF ATTACHED) ===');
   const ptsRes = await request('GET', '/patients', null, docToken);
-  const patient = ptsRes.data.items ? ptsRes.data.items[0] : ptsRes.data.data.items[0];
+  const patient = ptsRes.data.items ? ptsRes.data.items[0] : ptsRes.data.data?.items[0];
   const rxsRes = await request('GET', `/prescriptions/patient/${patient.id}`, null, docToken);
-  const rxList = rxsRes.data?.data || rxsRes.data || rxsRes;
+  const rxList = rxsRes.data;
   const rx = rxList[0];
   console.log(`Target Prescription: ${rx.prescriptionCode} (ID: ${rx.id})`);
 
@@ -88,8 +88,8 @@ async function runTest() {
     { channel: 'EMAIL', recipient: 'patient.rx@example.com' },
     docToken,
   );
-  const sendRxEmail = sendRxEmailRes.data.data || sendRxEmailRes.data;
-  console.log(`Email Status: ${sendRxEmail.status} | Message: '${sendRxEmailRes.data.message}'`);
+  const sendRxEmail = sendRxEmailRes.data;
+  console.log(`Email Status: ${sendRxEmail.status}`);
 
   console.log('\n=== 5. APPOINTMENT REMINDERS JOB & DUPLICATE PREVENTION ===');
   const run1Res = await request('POST', '/notifications/run-reminders', {}, adminToken);

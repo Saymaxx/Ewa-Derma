@@ -14,17 +14,12 @@ export class PaymentsController {
   @Roles('ADMIN', 'RECEPTIONIST')
   async create(@Body() dto: CreatePaymentDto, @Req() req: any) {
     const userId = req.user?.id || req.user?.sub;
-    const data = await this.paymentsService.create(dto, userId);
-    return {
-      message: 'Payment recorded successfully',
-      data,
-    };
+    return this.paymentsService.create(dto, userId);
   }
 
   @Get('invoice/:invoiceId')
   @Roles('ADMIN', 'RECEPTIONIST', 'DOCTOR')
   async findByInvoiceId(@Param('invoiceId') invoiceId: string) {
-    const data = await this.paymentsService.findByInvoiceId(invoiceId);
-    return { data };
+    return this.paymentsService.findByInvoiceId(invoiceId);
   }
 }

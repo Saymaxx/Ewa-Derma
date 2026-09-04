@@ -32,10 +32,19 @@ export class AllExceptionsFilter implements ExceptionFilter {
         details = resObj.error || resObj.details || null;
       }
     } else if (exception instanceof Error) {
-      message = exception.message;
+      status = HttpStatus.INTERNAL_SERVER_ERROR;
       this.logger.error(`Unhandled Exception: ${exception.message}`, exception.stack);
+      message = 'Something went wrong. Please try again.';
     } else {
+      status = HttpStatus.INTERNAL_SERVER_ERROR;
       this.logger.error('Unhandled unknown exception', exception);
+      message = 'Something went wrong. Please try again.';
+    }
+
+    // Mask raw internal messages for server errors (500+)
+    if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
+      message = 'Something went wrong. Please try again.';
+      details = 'Internal Server Error';
     }
 
     const errorResponse = {

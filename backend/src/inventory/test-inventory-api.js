@@ -232,7 +232,7 @@ async function runTest() {
   const adj = adjRes.data.data || adjRes.data;
   console.log(`Adjustment Recorded: ${adj.transactionType} (-${Math.abs(adj.quantity)} units) | Reason: '${adj.notes}'`);
 
-  const stockCheck4Data = (await request('GET', `/medicines/${medicine.id}/stock`, null, invToken)).data.data;
+  const stockCheck4Data = (await request('GET', `/medicines/${medicine.id}/stock`, null, invToken)).data;
   console.log(`Final Computed Stock after Adjustment: ${stockCheck4Data.computedStock} units`);
 
   console.log('\n=== 8. RBAC SECURITY CONTROLS ===');

@@ -15,18 +15,44 @@ export class AlertsService {
     const in60Days = new Date(today);
     in60Days.setDate(today.getDate() + 60);
 
-    // 1. Compute Low-Stock Medicines (computedStock <= minimumStock)
-    const medicines = await this.prisma.medicine.findMany({
-      where: { isActive: true },
-      include: {
-        category: { select: { id: true, name: true } },
-        transactions: { select: { quantity: true } },
-      },
+    // 1. Fetch medicines and batches in parallel without child transactions
+    const [medicines, batches, medStockAggs, batchStockAggs] = await Promise.all([
+      this.prisma.medicine.findMany({
+        where: { isActive: true },
+        include: {
+          category: { select: { id: true, name: true } },
+        },
+      }),
+      this.prisma.medicineBatch.findMany({
+        where: { isVoid: false },
+        orderBy: { expiryDate: 'asc' },
+        include: {
+          medicine: { select: { id: true, name: true, brand: true, unit: true } },
+          supplier: { select: { id: true, name: true } },
+        },
+      }),
+      this.prisma.inventoryTransaction.groupBy({
+        by: ['medicineId'],
+        _sum: { quantity: true },
+      }),
+      this.prisma.inventoryTransaction.groupBy({
+        by: ['batchId'],
+        where: { batchId: { not: null } },
+        _sum: { quantity: true },
+      }),
+    ]);
+
+    const medStockMap = new Map<string, number>();
+    medStockAggs.forEach((m) => medStockMap.set(m.medicineId, m._sum.quantity || 0));
+
+    const batchStockMap = new Map<string, number>();
+    batchStockAggs.forEach((b) => {
+      if (b.batchId) batchStockMap.set(b.batchId, b._sum.quantity || 0);
     });
 
     const lowStockList = medicines
       .map((med) => {
-        const computedStock = med.transactions.reduce((acc, t) => acc + t.quantity, 0);
+        const computedStock = medStockMap.get(med.id) || 0;
         return {
           id: med.id,
           name: med.name,
@@ -40,20 +66,9 @@ export class AlertsService {
       })
       .filter((m) => m.computedStock <= m.minimumStock);
 
-    // 2. Compute Expiry Batches (EXPIRED, EXPIRING_30, EXPIRING_60)
-    const batches = await this.prisma.medicineBatch.findMany({
-      where: { isVoid: false },
-      orderBy: { expiryDate: 'asc' },
-      include: {
-        medicine: { select: { id: true, name: true, brand: true, unit: true } },
-        supplier: { select: { id: true, name: true } },
-        transactions: { select: { quantity: true } },
-      },
-    });
-
     const batchAlerts = batches
       .map((b) => {
-        const computedStock = b.transactions.reduce((acc, t) => acc + t.quantity, 0);
+        const computedStock = batchStockMap.get(b.id) || 0;
         let status: 'EXPIRED' | 'EXPIRING_30' | 'EXPIRING_60' | 'OK' = 'OK';
 
         if (b.expiryDate <= today) {

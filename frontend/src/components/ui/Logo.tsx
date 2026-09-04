@@ -1,4 +1,5 @@
 import React from 'react';
+import Image from 'next/image';
 
 export interface LogoProps {
   size?: 'sm' | 'md' | 'lg';
@@ -31,10 +32,13 @@ export const Logo: React.FC<LogoProps> = ({ size = 'md', variant = 'full', class
       <div
         className={`${imageSizes[size]} rounded-full overflow-hidden shadow-md relative shrink-0 border-2 border-accent/40 bg-white hover:scale-105 transition-transform`}
       >
-        <img
+        <Image
           src="/ewa-derma-logo.jpg"
           alt="Ewa Derma Clinic Logo"
+          width={64}
+          height={64}
           className="w-full h-full object-cover"
+          priority
         />
       </div>
 

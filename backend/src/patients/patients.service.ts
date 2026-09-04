@@ -164,7 +164,13 @@ export class PatientsService {
   }
 
   async update(id: string, dto: UpdatePatientDto) {
-    await this.findOne(id);
+    const existing = await this.prisma.patient.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+    if (!existing) {
+      throw new NotFoundException(`Patient not found with ID: ${id}`);
+    }
 
     return this.prisma.patient.update({
       where: { id },

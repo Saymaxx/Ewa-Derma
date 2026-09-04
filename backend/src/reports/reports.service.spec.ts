@@ -44,6 +44,7 @@ describe('ReportsModule Services', () => {
     },
     inventoryTransaction: {
       findMany: jest.fn(),
+      groupBy: jest.fn(),
     },
   };
 
@@ -160,6 +161,10 @@ describe('ReportsModule Services', () => {
           medicine: { name: 'Retinol Cream 0.05%', sku: 'RET-005', category: 'Topical' },
         },
       ]);
+
+      mockPrismaService.inventoryTransaction.groupBy
+        .mockResolvedValueOnce([{ medicineId: 'med-1', _sum: { quantity: 8 } }])
+        .mockResolvedValueOnce([{ batchId: 'b-1', _sum: { quantity: 8 } }]);
 
       mockPrismaService.inventoryTransaction.findMany.mockResolvedValue([
         {

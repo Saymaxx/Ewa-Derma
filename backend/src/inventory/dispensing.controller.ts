@@ -21,7 +21,6 @@ export class DispensingController {
     @Req() req: any,
   ) {
     const userId = req.user?.userId;
-    const result = await this.dispensingService.dispensePrescription(id, dto, userId);
-    return { message: 'Prescription items dispensed successfully', data: result };
+    return this.dispensingService.dispensePrescription(id, dto, userId);
   }
 }

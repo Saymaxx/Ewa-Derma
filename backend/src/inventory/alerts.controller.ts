@@ -15,7 +15,6 @@ export class AlertsController {
   @ApiOperation({ summary: 'Get computed low-stock and expiry alerts for dashboard cards' })
   @ApiResponse({ status: 200, description: 'Inventory alerts breakdown retrieved' })
   async getInventoryAlerts() {
-    const data = await this.alertsService.getInventoryAlerts();
-    return { message: 'Inventory alerts retrieved successfully', data };
+    return this.alertsService.getInventoryAlerts();
   }
 }

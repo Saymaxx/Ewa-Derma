@@ -39,6 +39,8 @@ import {
   Filter,
 } from 'lucide-react';
 
+import { getCachedData, setCachedData } from '@/lib/cache';
+
 export default function AppointmentsPage() {
   const searchParams = useSearchParams();
   const preselectedPatientId = searchParams?.get('patientId');
@@ -81,8 +83,17 @@ export default function AppointmentsPage() {
   // 1. Fetch Doctors List
   const fetchDoctors = useCallback(async () => {
     try {
+      const cached = getCachedData<any[]>('doctors_list');
+      if (cached) {
+        setDoctors(cached);
+        if (cached.length > 0 && !bookForm.doctorId) {
+          setBookForm((prev) => ({ ...prev, doctorId: cached[0].id }));
+        }
+        return;
+      }
       const res = await api.get('/doctors');
       const docs = res.data.data || [];
+      setCachedData('doctors_list', docs, 300000); // 5 min TTL
       setDoctors(docs);
       if (docs.length > 0 && !bookForm.doctorId) {
         setBookForm((prev) => ({ ...prev, doctorId: docs[0].id }));

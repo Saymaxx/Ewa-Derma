@@ -35,8 +35,25 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<UserProfile | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [user, setUser] = useState<UserProfile | null>(() => {
+    if (typeof window !== 'undefined') {
+      const cachedUser = localStorage.getItem('ewa_user');
+      if (cachedUser) {
+        try {
+          return JSON.parse(cachedUser);
+        } catch {
+          return null;
+        }
+      }
+    }
+    return null;
+  });
+  const [isLoading, setIsLoading] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return !localStorage.getItem('ewa_access_token');
+    }
+    return true;
+  });
   const router = useRouter();
   const pathname = usePathname();
 
@@ -52,6 +69,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const res = await api.get('/auth/me');
       if (res.data?.data) {
         setUser(res.data.data);
+        localStorage.setItem('ewa_user', JSON.stringify(res.data.data));
       }
     } catch (err) {
       localStorage.removeItem('ewa_access_token');

@@ -101,6 +101,30 @@ export class AppointmentsService {
 
     const appointmentDateObj = new Date(dto.appointmentDate);
 
+    // 4. Double-booking slot conflict protection for doctor
+    const existingConflict = await this.prisma.appointment.findFirst({
+      where: {
+        doctorId: dto.doctorId,
+        appointmentDate: appointmentDateObj,
+        status: {
+          notIn: [AppointmentStatus.CANCELLED, AppointmentStatus.NO_SHOW],
+        },
+        OR: [
+          {
+            startTime: { lt: dto.endTime },
+            endTime: { gt: dto.startTime },
+          },
+          {
+            startTime: dto.startTime,
+          },
+        ],
+      },
+    });
+
+    if (existingConflict) {
+      throw new ConflictException('This time slot is already booked. Please select another time.');
+    }
+
     // Generate sequential Appointment Code: A-2001
     const appointmentCode = await this.entityIdService.generateNextId('A');
 
@@ -153,6 +177,8 @@ export class AppointmentsService {
     doctorId?: string;
     patientId?: string;
     status?: AppointmentStatus;
+    page?: number;
+    limit?: number;
   }) {
     const where: any = {};
 
@@ -169,9 +195,14 @@ export class AppointmentsService {
       where.status = filters.status;
     }
 
+    const safeLimit = filters.limit ? Math.min(Math.max(1, Number(filters.limit)), 100) : (filters.date || filters.patientId ? undefined : 100);
+    const safeSkip = filters.page && safeLimit ? (Math.max(1, Number(filters.page)) - 1) * safeLimit : undefined;
+
     return this.prisma.appointment.findMany({
       where,
       orderBy: [{ appointmentDate: 'desc' }, { startTime: 'asc' }],
+      take: safeLimit,
+      skip: safeSkip,
       include: {
         patient: {
           select: {
@@ -196,6 +227,72 @@ export class AppointmentsService {
         },
       },
     });
+  }
+
+  async getDashboardStats() {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const todayDate = new Date(todayStr);
+
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+    sevenDaysAgo.setHours(0, 0, 0, 0);
+
+    const [
+      totalPatients,
+      activeDoctors,
+      todayAppointments,
+      checkedInCount,
+      allAppointmentsSummary,
+      recent7DaysAppointments,
+    ] = await Promise.all([
+      this.prisma.patient.count({ where: { isActive: true } }),
+      this.prisma.doctor.count({ where: { isActive: true } }),
+      this.prisma.appointment.count({ where: { appointmentDate: todayDate } }),
+      this.prisma.appointment.count({
+        where: {
+          appointmentDate: todayDate,
+          status: { in: [AppointmentStatus.CHECKED_IN, AppointmentStatus.WAITING, AppointmentStatus.IN_CONSULTATION] },
+        },
+      }),
+      this.prisma.appointment.groupBy({
+        by: ['status'],
+        _count: { _all: true },
+      }),
+      this.prisma.appointment.findMany({
+        where: { appointmentDate: { gte: sevenDaysAgo } },
+        select: { appointmentDate: true, status: true },
+      }),
+    ]);
+
+    const statusCounts: Record<string, number> = {
+      SCHEDULED: 0,
+      CONFIRMED: 0,
+      CHECKED_IN: 0,
+      WAITING: 0,
+      IN_CONSULTATION: 0,
+      COMPLETED: 0,
+      CANCELLED: 0,
+      NO_SHOW: 0,
+    };
+
+    let totalAppointments = 0;
+    allAppointmentsSummary.forEach((group) => {
+      statusCounts[group.status] = group._count._all;
+      totalAppointments += group._count._all;
+    });
+
+    return {
+      totalPatients,
+      activeDoctors,
+      todayAppointments,
+      checkedInCount,
+      totalAppointments,
+      statusCounts,
+      recent7DaysAppointments: recent7DaysAppointments.map((a) => ({
+        appointmentDate: a.appointmentDate,
+        status: a.status,
+      })),
+    };
   }
 
   async getLiveWaitingQueue(doctorId?: string) {

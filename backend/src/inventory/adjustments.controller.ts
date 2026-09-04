@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Req } from '@nestjs/common';
+import { Controller, Get, Post, Body, Req, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AdjustmentsService } from './adjustments.service';
 import { CreateAdjustmentDto } from './dto/create-adjustment.dto';
@@ -15,9 +15,8 @@ export class AdjustmentsController {
   @Roles(RoleName.ADMIN, RoleName.INVENTORY_MANAGER)
   @ApiOperation({ summary: 'List all manual stock adjustment logs' })
   @ApiResponse({ status: 200, description: 'List of adjustments' })
-  async findAll() {
-    const items = await this.adjustmentsService.findAll();
-    return { message: 'Adjustments retrieved successfully', data: items };
+  async findAll(@Query('page') page?: number, @Query('limit') limit?: number) {
+    return this.adjustmentsService.findAll(page, limit);
   }
 
   @Post()
@@ -26,7 +25,6 @@ export class AdjustmentsController {
   @ApiResponse({ status: 201, description: 'Stock adjustment recorded successfully' })
   async recordAdjustment(@Body() dto: CreateAdjustmentDto, @Req() req: any) {
     const userId = req.user?.userId;
-    const item = await this.adjustmentsService.recordAdjustment(dto, userId);
-    return { message: 'Stock adjustment recorded successfully', data: item };
+    return this.adjustmentsService.recordAdjustment(dto, userId);
   }
 }

@@ -28,17 +28,27 @@ export class MedicinesService {
         category: {
           select: { id: true, name: true },
         },
-        transactions: {
-          select: { quantity: true },
-        },
       },
     });
 
+    if (items.length === 0) return [];
+
+    const medicineIds = items.map((m) => m.id);
+    const stockAggregations = await this.prisma.inventoryTransaction.groupBy({
+      by: ['medicineId'],
+      where: { medicineId: { in: medicineIds } },
+      _sum: { quantity: true },
+    });
+
+    const stockMap = new Map<string, number>();
+    stockAggregations.forEach((sa) => {
+      stockMap.set(sa.medicineId, sa._sum.quantity || 0);
+    });
+
     return items.map((med) => {
-      const computedStock = med.transactions.reduce((acc, t) => acc + t.quantity, 0);
-      const { transactions, ...rest } = med;
+      const computedStock = stockMap.get(med.id) || 0;
       return {
-        ...rest,
+        ...med,
         computedStock,
         isLowStock: computedStock <= med.minimumStock,
       };
@@ -55,11 +65,7 @@ export class MedicinesService {
           orderBy: { expiryDate: 'asc' },
           include: {
             supplier: { select: { id: true, name: true } },
-            transactions: { select: { quantity: true } },
           },
-        },
-        transactions: {
-          select: { quantity: true },
         },
       },
     });
@@ -68,17 +74,30 @@ export class MedicinesService {
       throw new NotFoundException(`Medicine not found with ID: ${id}`);
     }
 
-    const computedStock = medicine.transactions.reduce((acc, t) => acc + t.quantity, 0);
-    const batchesWithStock = medicine.batches.map((b) => {
-      const batchStock = b.transactions.reduce((acc, t) => acc + t.quantity, 0);
-      const { transactions, ...bRest } = b;
-      return {
-        ...bRest,
-        computedStock: batchStock,
-      };
+    const [stockAgg, batchStockAggs] = await Promise.all([
+      this.prisma.inventoryTransaction.aggregate({
+        where: { medicineId: id },
+        _sum: { quantity: true },
+      }),
+      this.prisma.inventoryTransaction.groupBy({
+        by: ['batchId'],
+        where: { medicineId: id, batchId: { not: null } },
+        _sum: { quantity: true },
+      }),
+    ]);
+
+    const computedStock = stockAgg._sum.quantity || 0;
+    const batchStockMap = new Map<string, number>();
+    batchStockAggs.forEach((bsa) => {
+      if (bsa.batchId) batchStockMap.set(bsa.batchId, bsa._sum.quantity || 0);
     });
 
-    const { transactions, batches, ...rest } = medicine;
+    const batchesWithStock = medicine.batches.map((b) => ({
+      ...b,
+      computedStock: batchStockMap.get(b.id) || 0,
+    }));
+
+    const { batches, ...rest } = medicine;
     return {
       ...rest,
       computedStock,

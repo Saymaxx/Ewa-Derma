@@ -6,6 +6,8 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
 
+import { getJwtAccessSecret } from './jwt-secret.util';
+
 @Module({
   imports: [
     PassportModule.register({ defaultStrategy: 'jwt' }),
@@ -13,9 +15,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
-        secret:
-          configService.get<string>('JWT_ACCESS_SECRET') ||
-          'ewa_derma_super_secret_access_jwt_key_2026_clinical',
+        secret: getJwtAccessSecret(configService),
         signOptions: {
           expiresIn: configService.get<string>('JWT_ACCESS_EXPIRATION') || '15m',
         },

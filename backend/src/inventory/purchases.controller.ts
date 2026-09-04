@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Req } from '@nestjs/common';
+import { Controller, Get, Post, Body, Req, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { PurchasesService } from './purchases.service';
 import { CreatePurchaseDto } from './dto/create-purchase.dto';
@@ -15,9 +15,8 @@ export class PurchasesController {
   @Roles(RoleName.ADMIN, RoleName.INVENTORY_MANAGER)
   @ApiOperation({ summary: 'List all stock purchase transactions' })
   @ApiResponse({ status: 200, description: 'List of purchases' })
-  async findAll() {
-    const items = await this.purchasesService.findAll();
-    return { message: 'Purchases retrieved successfully', data: items };
+  async findAll(@Query('page') page?: number, @Query('limit') limit?: number) {
+    return this.purchasesService.findAll(page, limit);
   }
 
   @Post()
@@ -26,7 +25,6 @@ export class PurchasesController {
   @ApiResponse({ status: 201, description: 'Purchase recorded and batch stock updated' })
   async recordPurchase(@Body() dto: CreatePurchaseDto, @Req() req: any) {
     const userId = req.user?.userId;
-    const item = await this.purchasesService.recordPurchase(dto, userId);
-    return { message: 'Stock purchase recorded successfully', data: item };
+    return this.purchasesService.recordPurchase(dto, userId);
   }
 }

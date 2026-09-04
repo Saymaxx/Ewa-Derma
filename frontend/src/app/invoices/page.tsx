@@ -2,8 +2,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '@/lib/api';
-import { Navbar } from '@/components/layout/Navbar';
-import { Sidebar } from '@/components/layout/Sidebar';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -100,17 +98,13 @@ export default function InvoicesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-surface-ground">
-      <Navbar />
-      <div className="flex">
-        <Sidebar />
-        <main className="flex-1 p-6 max-w-7xl mx-auto space-y-6">
+    <div className="space-y-6">
           {/* Header */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-3 mb-1">
                 <h1 className="text-2xl font-bold text-text-main">Billing & Invoices</h1>
-                <Badge variant="accent" size="sm">Phase 4 Active</Badge>
+                <Badge variant="accent" size="sm">Billing System</Badge>
               </div>
               <p className="text-xs text-text-secondary">
                 Generate billing statements, collect partial/full payments, export PDFs, and manage refunds.
@@ -335,8 +329,6 @@ export default function InvoicesPage() {
             onClose={() => setIsDetailOpen(false)}
             onRefresh={fetchInvoices}
           />
-        </main>
-      </div>
     </div>
   );
 }

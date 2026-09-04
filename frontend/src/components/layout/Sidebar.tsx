@@ -201,8 +201,8 @@ export const Sidebar: React.FC = () => {
       <div className="p-4 border-t border-surface-border bg-surface/50">
         <div className="text-xs text-text-muted space-y-1">
           <p className="font-medium text-text-primary">Ewa Derma Clinic</p>
-          <p className="text-[11px]">Phase 2: Patients & Appointments</p>
-          <p className="text-[10px] text-accent font-semibold">Live Queue & State Machine</p>
+          <p className="text-[11px]">Clinic Management System</p>
+          <p className="text-[10px] text-accent font-semibold">v1.0.0 Production Ready</p>
         </div>
       </div>
     </aside>

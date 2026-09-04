@@ -7,10 +7,15 @@ import { InventoryTransactionType } from '@prisma/client';
 export class PurchasesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll() {
+  async findAll(page?: number, limit: number = 50) {
+    const safeLimit = Math.min(Math.max(1, Number(limit) || 50), 100);
+    const safeSkip = page ? (Math.max(1, Number(page)) - 1) * safeLimit : undefined;
+
     return this.prisma.inventoryTransaction.findMany({
       where: { transactionType: InventoryTransactionType.PURCHASE_IN },
       orderBy: { createdAt: 'desc' },
+      take: safeLimit,
+      skip: safeSkip,
       include: {
         medicine: { select: { id: true, name: true, brand: true, unit: true } },
         batch: {

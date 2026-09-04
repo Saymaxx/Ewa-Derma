@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { useAuth } from '@/lib/auth-context';
 import { useToast } from '@/components/ui/Toast';
 import {
@@ -205,10 +206,13 @@ export default function LoginPage() {
         <div className="relative z-10 space-y-6">
           <div className="flex items-center gap-4 select-none">
             <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden shadow-xl border-2 border-amber-400/80 bg-white p-1 shrink-0 hover:scale-105 transition-transform duration-300">
-              <img
+              <Image
                 src="/ewa-derma-logo.jpg"
                 alt="Ewa Derma Clinic Logo"
+                width={80}
+                height={80}
                 className="w-full h-full object-cover rounded-xl"
+                priority
               />
             </div>
 

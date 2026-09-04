@@ -10,6 +10,8 @@ export const metadata: Metadata = {
   description: 'Clinical Operations, Patient Records, Prescriptions, Billing & Inventory Management',
 };
 
+const inter = Inter({ subsets: ['latin'], display: 'swap' });
+
 export default function RootLayout({
   children,
 }: {
@@ -17,7 +19,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>
+      <body className={inter.className}>
         <ToastProvider>
           <AuthProvider>
             <AppLayout>{children}</AppLayout>

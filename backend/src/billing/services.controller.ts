@@ -14,36 +14,26 @@ export class ServicesController {
   @Get()
   @Roles('ADMIN', 'RECEPTIONIST', 'DOCTOR')
   async findAll() {
-    const data = await this.servicesService.findAll();
-    return { data };
+    return this.servicesService.findAll();
   }
 
   @Get(':id')
   @Roles('ADMIN', 'RECEPTIONIST', 'DOCTOR')
   async findOne(@Param('id') id: string) {
-    const data = await this.servicesService.findOne(id);
-    return { data };
+    return this.servicesService.findOne(id);
   }
 
   @Post()
   @Roles('ADMIN')
   async create(@Body() dto: CreateServiceDto, @Req() req: any) {
     const userId = req.user?.id || req.user?.sub;
-    const data = await this.servicesService.create(dto, userId);
-    return {
-      message: 'Service created successfully',
-      data,
-    };
+    return this.servicesService.create(dto, userId);
   }
 
   @Patch(':id')
   @Roles('ADMIN')
   async update(@Param('id') id: string, @Body() dto: UpdateServiceDto, @Req() req: any) {
     const userId = req.user?.id || req.user?.sub;
-    const data = await this.servicesService.update(id, dto, userId);
-    return {
-      message: 'Service updated successfully',
-      data,
-    };
+    return this.servicesService.update(id, dto, userId);
   }
 }

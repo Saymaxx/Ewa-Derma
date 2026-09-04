@@ -12,6 +12,8 @@ import { AuditLogService } from '../audit-log/audit-log.service';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh.dto';
 
+import { getJwtAccessSecret, getJwtRefreshSecret } from './jwt-secret.util';
+
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
@@ -246,6 +248,9 @@ export class AuthService {
     return { message: 'Logged out successfully.' };
   }
 
+  private cachedClinicSetting: any = null;
+  private lastClinicFetchTime: number = 0;
+
   async getProfile(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -260,8 +265,10 @@ export class AuthService {
         lastLoginAt: true,
         createdAt: true,
         userRoles: {
-          include: {
-            role: true,
+          select: {
+            role: {
+              select: { name: true },
+            },
           },
         },
         doctor: {
@@ -282,7 +289,12 @@ export class AuthService {
       throw new UnauthorizedException('User not found.');
     }
 
-    const clinic = await this.prisma.clinicSetting.findFirst();
+    const now = Date.now();
+    if (!this.cachedClinicSetting || now - this.lastClinicFetchTime > 300000) {
+      this.cachedClinicSetting = await this.prisma.clinicSetting.findFirst();
+      this.lastClinicFetchTime = now;
+    }
+    const clinic = this.cachedClinicSetting;
 
     return {
       ...user,
@@ -307,14 +319,10 @@ export class AuthService {
     username: string | undefined,
     roles: string[],
   ) {
-    const accessSecret =
-      this.configService.get<string>('JWT_ACCESS_SECRET') ||
-      'ewa_derma_super_secret_access_jwt_key_2026_clinical';
+    const accessSecret = getJwtAccessSecret(this.configService);
     const accessExp = this.configService.get<string>('JWT_ACCESS_EXPIRATION') || '15m';
 
-    const refreshSecret =
-      this.configService.get<string>('JWT_REFRESH_SECRET') ||
-      'ewa_derma_super_secret_refresh_jwt_key_2026_clinical';
+    const refreshSecret = getJwtRefreshSecret(this.configService);
     const refreshExp = this.configService.get<string>('JWT_REFRESH_EXPIRATION') || '7d';
 
     const payload = { sub: userId, email, username, roles };

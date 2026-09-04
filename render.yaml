@@ -1,0 +1,31 @@
+services:
+  # 1. PostgreSQL Database Service
+  - type: postgres
+    name: ewa-derma-db
+    plan: free
+    ipAllowList: [] # allow internal connection
+
+  # 2. NestJS Backend Service
+  - type: web
+    name: ewa-derma-backend
+    env: node
+    region: singapore
+    plan: free
+    rootDir: backend
+    buildCommand: npm install && npx prisma generate && npm run build
+    startCommand: npm run deploy:start
+    envVars:
+      - key: PORT
+        value: 4000
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ewa-derma-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: CORS_ORIGIN
+        value: https://ewa-derma-frontend.vercel.app

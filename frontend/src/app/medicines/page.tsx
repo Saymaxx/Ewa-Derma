@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
+import { useDebouncedValue } from '@/lib/useDebouncedValue';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -27,8 +28,9 @@ export default function MedicinesPage() {
 
   const [medicines, setMedicines] = useState<any[]>([]);
   const [alerts, setAlerts] = useState<any>(null);
-  const [search, setSearch] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const debouncedSearch = useDebouncedValue(search, 300);
 
   // Edit Modal State
   const [selectedMed, setSelectedMed] = useState<any>(null);
@@ -43,7 +45,7 @@ export default function MedicinesPage() {
     setIsLoading(true);
     try {
       const [medsRes, alertsRes] = await Promise.all([
-        api.get('/medicines', { params: { search: search || undefined, limit: 100 } }),
+        api.get('/medicines', { params: { search: debouncedSearch || undefined, limit: 100 } }),
         api.get('/inventory/alerts').catch(() => ({ data: { data: null } })),
       ]);
       const rawMeds = medsRes?.data?.data ?? medsRes?.data;
@@ -60,7 +62,7 @@ export default function MedicinesPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [search, showToast]);
+  }, [debouncedSearch, showToast]);
 
   useEffect(() => {
     fetchMedicines();
@@ -105,7 +107,7 @@ export default function MedicinesPage() {
         <div>
           <div className="flex items-center gap-3 mb-1">
             <h1 className="text-2xl font-bold text-text-main">Pharmacy & Inventory</h1>
-            <Badge variant="accent" size="sm">Phase 5 FEFO Active</Badge>
+            <Badge variant="accent" size="sm">FEFO Inventory</Badge>
           </div>
           <p className="text-xs text-text-secondary">
             Manage medicine master pricing, purchase receipts, stock transaction ledgers, and FEFO prescription dispensing.

@@ -41,14 +41,26 @@ export class AppointmentsController {
   @ApiQuery({ name: 'doctorId', required: false, type: String })
   @ApiQuery({ name: 'patientId', required: false, type: String })
   @ApiQuery({ name: 'status', required: false, enum: AppointmentStatus })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiResponse({ status: 200, description: 'Appointments list retrieved' })
   async findAll(
     @Query('date') date?: string,
     @Query('doctorId') doctorId?: string,
     @Query('patientId') patientId?: string,
     @Query('status') status?: AppointmentStatus,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
   ) {
-    return this.appointmentsService.findAll({ date, doctorId, patientId, status });
+    return this.appointmentsService.findAll({ date, doctorId, patientId, status, page, limit });
+  }
+
+  @Get('stats')
+  @Roles(RoleName.ADMIN, RoleName.RECEPTIONIST, RoleName.DOCTOR)
+  @ApiOperation({ summary: 'Get aggregated appointment and clinic stats for dashboard' })
+  @ApiResponse({ status: 200, description: 'Pre-computed clinic dashboard stats' })
+  async getDashboardStats() {
+    return this.appointmentsService.getDashboardStats();
   }
 
   @Get('queue/today')

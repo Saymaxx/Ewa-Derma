@@ -4,6 +4,8 @@ import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PrismaService } from '../../prisma/prisma.service';
 
+import { getJwtAccessSecret } from '../jwt-secret.util';
+
 export interface JwtPayload {
   sub: string;
   email: string;
@@ -20,9 +22,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey:
-        configService.get<string>('JWT_ACCESS_SECRET') ||
-        'ewa_derma_super_secret_access_jwt_key_2026_clinical',
+      secretOrKey: getJwtAccessSecret(configService),
     });
   }
 

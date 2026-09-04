@@ -44,8 +44,7 @@ export class ReportsController {
   @ApiOperation({ summary: 'Get appointment analytics report' })
   async getAppointmentReport(@Query() query: AppointmentReportQueryDto, @Req() req: any) {
     const userContext = this.extractUserContext(req);
-    const data = await this.appointmentsReportService.generateAppointmentReport(query, userContext);
-    return { data, meta: { timestamp: new Date().toISOString() } };
+    return this.appointmentsReportService.generateAppointmentReport(query, userContext);
   }
 
   // -------------------------------------------------------------------
@@ -56,8 +55,7 @@ export class ReportsController {
   @ApiOperation({ summary: 'Get patient registration & follow-up report' })
   async getPatientReport(@Query() query: PatientReportQueryDto, @Req() req: any) {
     const userContext = this.extractUserContext(req);
-    const data = await this.patientsReportService.generatePatientReport(query, userContext);
-    return { data, meta: { timestamp: new Date().toISOString() } };
+    return this.patientsReportService.generatePatientReport(query, userContext);
   }
 
   // -------------------------------------------------------------------
@@ -68,8 +66,7 @@ export class ReportsController {
   @ApiOperation({ summary: 'Get financial revenue & payments report' })
   async getRevenueReport(@Query() query: RevenueReportQueryDto, @Req() req: any) {
     const userContext = this.extractUserContext(req);
-    const data = await this.revenueReportService.generateRevenueReport(query, userContext);
-    return { data, meta: { timestamp: new Date().toISOString() } };
+    return this.revenueReportService.generateRevenueReport(query, userContext);
   }
 
   // -------------------------------------------------------------------
@@ -80,8 +77,7 @@ export class ReportsController {
   @ApiOperation({ summary: 'Get pharmacy inventory & stock movement report' })
   async getInventoryReport(@Query() query: InventoryReportQueryDto, @Req() req: any) {
     const userContext = this.extractUserContext(req);
-    const data = await this.inventoryReportService.generateInventoryReport(query, userContext);
-    return { data, meta: { timestamp: new Date().toISOString() } };
+    return this.inventoryReportService.generateInventoryReport(query, userContext);
   }
 
   // -------------------------------------------------------------------

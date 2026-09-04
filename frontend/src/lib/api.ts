@@ -109,3 +109,18 @@ api.interceptors.response.use(
     return Promise.reject(error);
   },
 );
+
+export function getErrorMessage(error: any): string {
+  if (!error) return 'Something went wrong. Please try again.';
+  const resData = error?.response?.data;
+  if (typeof resData?.error?.message === 'string' && resData.error.message.trim()) {
+    return resData.error.message;
+  }
+  if (typeof resData?.message === 'string' && resData.message.trim()) {
+    return resData.message;
+  }
+  if (typeof error?.message === 'string' && !error.message.startsWith('Request failed') && !error.message.includes('Axios') && !error.message.includes('Network Error')) {
+    return error.message;
+  }
+  return 'Something went wrong. Please try again.';
+}

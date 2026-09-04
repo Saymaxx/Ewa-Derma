@@ -135,12 +135,7 @@ export class NotificationsController {
       pdfFilename: `${invoice.invoiceCode}.pdf`,
     });
 
-    return {
-      message: result.status === NotificationStatus.SENT
-        ? `Invoice ${invoice.invoiceCode} sent to ${recipient} via ${channel}`
-        : `Invoice notification failed: ${result.errorLog}`,
-      data: result,
-    };
+    return result;
   }
 
   @Post('send-prescription/:prescriptionId')
@@ -199,12 +194,7 @@ export class NotificationsController {
       pdfFilename: rxPdf.filename,
     });
 
-    return {
-      message: result.status === NotificationStatus.SENT
-        ? `Prescription ${prescription.prescriptionCode} sent to ${recipient} via ${channel}`
-        : `Prescription notification failed: ${result.errorLog}`,
-      data: result,
-    };
+    return result;
   }
 
   @Post('run-reminders')
@@ -212,11 +202,7 @@ export class NotificationsController {
   @ApiOperation({ summary: 'Manually trigger appointment reminders job for upcoming visits' })
   @ApiResponse({ status: 200, description: 'Reminders job execution summary' })
   async runReminders() {
-    const summary = await this.remindersService.processAppointmentReminders();
-    return {
-      message: `Reminders job completed: ${summary.sentCount} sent, ${summary.skippedCount} skipped (already sent)`,
-      data: summary,
-    };
+    return this.remindersService.processAppointmentReminders();
   }
 
   @Get('history/:entityType/:entityId')
@@ -227,8 +213,7 @@ export class NotificationsController {
     @Param('entityType') entityType: string,
     @Param('entityId') entityId: string,
   ) {
-    const items = await this.notificationsService.getHistory(entityType, entityId);
-    return { message: 'Notification history retrieved', data: items };
+    return this.notificationsService.getHistory(entityType, entityId);
   }
 
   @Get()
@@ -246,13 +231,13 @@ export class NotificationsController {
     @Query('channel') channel?: NotificationChannel,
     @Query('limit') limit?: string,
   ) {
-    const items = await this.notificationsService.findAll(
+    const safeLimit = Math.min(Math.max(1, parseInt(limit || '50', 10) || 50), 100);
+    return this.notificationsService.findAll(
       search,
       status,
       type,
       channel,
-      parseInt(limit || '50', 10),
+      safeLimit,
     );
-    return { message: 'Notification log retrieved', data: items };
   }
 }

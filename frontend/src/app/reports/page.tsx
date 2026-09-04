@@ -36,6 +36,8 @@ import {
   TrendingUp,
 } from 'lucide-react';
 
+import { getCachedData, setCachedData } from '@/lib/cache';
+
 export default function ReportsPage() {
   const { user, hasRole } = useAuth();
   const { showToast } = useToast();
@@ -62,9 +64,18 @@ export default function ReportsPage() {
 
   // Fetch doctors for filter dropdown
   useEffect(() => {
+    const cached = getCachedData<any[]>('doctors_list');
+    if (cached) {
+      setDoctorsList(cached);
+      return;
+    }
     api
       .get('/doctors')
-      .then((res) => setDoctorsList(res.data.data || []))
+      .then((res) => {
+        const docs = res.data.data || [];
+        setDoctorsList(docs);
+        setCachedData('doctors_list', docs);
+      })
       .catch(() => {});
   }, []);
 
@@ -180,7 +191,7 @@ export default function ReportsPage() {
               Clinical Reports & Analytics
             </h1>
             <Badge variant="accent" size="sm">
-              Phase 7 Full Analytics
+              Full Analytics
             </Badge>
           </div>
           <p className="text-sm text-text-secondary">
