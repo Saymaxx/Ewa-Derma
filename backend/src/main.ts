@@ -10,17 +10,37 @@ async function bootstrap() {
 
   const configService = app.get(ConfigService);
   const port = configService.get<number>('PORT', 4000);
-  const frontendUrl = configService.get<string>('FRONTEND_URL', 'http://localhost:3000');
+  const frontendUrl = configService.get<string>('FRONTEND_URL');
+  const corsOrigin = configService.get<string>('CORS_ORIGIN');
 
   // Set global API prefix
   app.setGlobalPrefix('api');
 
-  // Enable CORS
+  // Enable CORS with dynamic origin validation
   app.enableCors({
-    origin: [frontendUrl, 'http://localhost:3000', 'http://127.0.0.1:3000'],
+    origin: (origin, callback) => {
+      // Allow server-to-server or non-browser tools (no origin header)
+      if (!origin) return callback(null, true);
+
+      // Match allowed origins: localhost, vercel deployments, or explicit env vars
+      const isAllowed =
+        corsOrigin === '*' ||
+        origin === frontendUrl ||
+        origin === corsOrigin ||
+        origin.endsWith('.vercel.app') ||
+        origin.includes('localhost') ||
+        origin.includes('127.0.0.1');
+
+      if (isAllowed) {
+        callback(null, true);
+      } else {
+        logger.warn(`CORS blocked request from origin: ${origin}`);
+        callback(new Error(`Origin ${origin} not allowed by CORS`));
+      }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
   });
 
   // Global validation pipe
