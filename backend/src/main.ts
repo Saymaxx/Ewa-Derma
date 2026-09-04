@@ -16,31 +16,21 @@ async function bootstrap() {
   // Set global API prefix
   app.setGlobalPrefix('api');
 
-  // Enable CORS with dynamic origin validation
+  // Enable universal CORS (dynamically echoes requesting origin with credentials)
   app.enableCors({
-    origin: (origin, callback) => {
-      // Allow server-to-server or non-browser tools (no origin header)
-      if (!origin) return callback(null, true);
-
-      // Match allowed origins: localhost, vercel deployments, or explicit env vars
-      const isAllowed =
-        corsOrigin === '*' ||
-        origin === frontendUrl ||
-        origin === corsOrigin ||
-        origin.endsWith('.vercel.app') ||
-        origin.includes('localhost') ||
-        origin.includes('127.0.0.1');
-
-      if (isAllowed) {
-        callback(null, true);
-      } else {
-        logger.warn(`CORS blocked request from origin: ${origin}`);
-        callback(new Error(`Origin ${origin} not allowed by CORS`));
-      }
-    },
+    origin: true,
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-Requested-With',
+      'Accept',
+      'Origin',
+      'Access-Control-Request-Method',
+      'Access-Control-Request-Headers',
+    ],
+    optionsSuccessStatus: 204,
   });
 
   // Global validation pipe
