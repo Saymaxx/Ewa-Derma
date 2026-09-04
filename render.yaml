@@ -23,7 +23,7 @@ services:
         fromDatabase:
           name: ewa-derma-db
           property: connectionString
-      - key: JWT_SECRET
+      - key: JWT_ACCESS_SECRET
         generateValue: true
       - key: JWT_REFRESH_SECRET
         generateValue: true
