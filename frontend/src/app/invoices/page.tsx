@@ -34,8 +34,8 @@ export default function InvoicesPage() {
   // Filters
   const [selectedPatientId, setSelectedPatientId] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
-  const [startDate, setStartDate] = useState('2026-09-01');
-  const [endDate, setEndDate] = useState('2026-09-30');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
   // Modals
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -320,7 +320,13 @@ export default function InvoicesPage() {
           <CreateInvoiceModal
             isOpen={isCreateOpen}
             onClose={() => setIsCreateOpen(false)}
-            onSuccess={fetchInvoices}
+            onSuccess={(createdInvoice) => {
+              fetchInvoices();
+              if (createdInvoice?.id) {
+                setSelectedInvoiceId(createdInvoice.id);
+                setIsDetailOpen(true);
+              }
+            }}
           />
 
           <InvoiceDetailModal

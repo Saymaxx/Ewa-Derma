@@ -66,10 +66,16 @@ export default function PatientProfilePage() {
         api.get(`/prescriptions/patient/${id}`).catch(() => ({ data: { data: [] } })),
         api.get('/invoices', { params: { patientId: id } }).catch(() => ({ data: { data: [] } })),
       ]);
-      setPatient(ptRes.data.data);
-      setConsultations(consRes.data.data || []);
-      setPrescriptions(rxRes.data.data || []);
-      setPatientInvoices(invRes.data.data || []);
+
+      const ptData = ptRes?.data?.data ?? ptRes?.data;
+      const consData = consRes?.data?.data?.items ?? consRes?.data?.data ?? consRes?.data;
+      const rxData = rxRes?.data?.data?.items ?? rxRes?.data?.data ?? rxRes?.data;
+      const invData = invRes?.data?.data?.items ?? invRes?.data?.data ?? invRes?.data;
+
+      setPatient(ptData);
+      setConsultations(Array.isArray(consData) ? consData : []);
+      setPrescriptions(Array.isArray(rxData) ? rxData : []);
+      setPatientInvoices(Array.isArray(invData) ? invData : []);
     } catch {
       showToast('Patient record not found', 'error');
       router.push('/patients');
@@ -81,6 +87,10 @@ export default function PatientProfilePage() {
   useEffect(() => {
     if (id) fetchPatientData();
   }, [id, fetchPatientData]);
+
+  const safeConsultations = Array.isArray(consultations) ? consultations : [];
+  const safePrescriptions = Array.isArray(prescriptions) ? prescriptions : [];
+  const safeInvoices = Array.isArray(patientInvoices) ? patientInvoices : [];
 
   if (isLoading) {
     return (
@@ -107,15 +117,15 @@ export default function PatientProfilePage() {
       id: 'clinical',
       label: 'Clinical Notes',
       icon: <Stethoscope className="w-4 h-4" />,
-      count: consultations.length,
+      count: safeConsultations.length,
     },
     {
       id: 'prescriptions',
       label: 'Prescriptions',
       icon: <Pill className="w-4 h-4" />,
-      count: prescriptions.length,
+      count: safePrescriptions.length,
     },
-    { id: 'billing', label: 'Billing & Invoices', icon: <CreditCard className="w-4 h-4" />, count: patientInvoices.length },
+    { id: 'billing', label: 'Billing & Invoices', icon: <CreditCard className="w-4 h-4" />, count: safeInvoices.length },
   ];
 
   return (
@@ -358,10 +368,10 @@ export default function PatientProfilePage() {
           {activeTab === 'clinical' && (
             <div className="space-y-6 animate-in fade-in duration-150">
               <h3 className="text-sm font-bold uppercase tracking-wider text-text-secondary">
-                Clinical Consultations & Findings ({consultations.length})
+                Clinical Consultations & Findings ({safeConsultations.length})
               </h3>
 
-              {consultations.length === 0 ? (
+              {safeConsultations.length === 0 ? (
                 <div className="p-12 text-center space-y-3 bg-surface rounded-xl border border-surface-border text-text-secondary text-xs">
                   <Stethoscope className="w-10 h-10 text-primary/40 mx-auto" />
                   <p className="font-semibold text-text-primary">No consultation records recorded yet</p>
@@ -369,7 +379,7 @@ export default function PatientProfilePage() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {consultations.map((c) => (
+                  {safeConsultations.map((c) => (
                     <div
                       key={c.id}
                       className="p-5 rounded-2xl bg-surface border border-surface-border space-y-4 text-xs"
@@ -453,10 +463,10 @@ export default function PatientProfilePage() {
           {activeTab === 'prescriptions' && (
             <div className="space-y-6 animate-in fade-in duration-150">
               <h3 className="text-sm font-bold uppercase tracking-wider text-text-secondary">
-                Medical Prescriptions ({prescriptions.length})
+                Medical Prescriptions ({safePrescriptions.length})
               </h3>
 
-              {prescriptions.length === 0 ? (
+              {safePrescriptions.length === 0 ? (
                 <div className="p-12 text-center space-y-3 bg-surface rounded-xl border border-surface-border text-text-secondary text-xs">
                   <Pill className="w-10 h-10 text-accent/50 mx-auto" />
                   <p className="font-semibold text-text-primary">No prescriptions issued yet</p>
@@ -464,7 +474,7 @@ export default function PatientProfilePage() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {prescriptions.map((rx) => (
+                  {safePrescriptions.map((rx) => (
                     <div
                       key={rx.id}
                       className="p-5 rounded-2xl bg-surface border border-surface-border space-y-3 text-xs"
@@ -540,7 +550,7 @@ export default function PatientProfilePage() {
             <div className="space-y-6 animate-in fade-in duration-150">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-bold uppercase tracking-wider text-text-secondary">
-                  Invoice & Payment History ({patientInvoices.length})
+                  Invoice & Payment History ({safeInvoices.length})
                 </h3>
                 {hasRole(['ADMIN', 'RECEPTIONIST']) && (
                   <Button
@@ -554,7 +564,7 @@ export default function PatientProfilePage() {
                 )}
               </div>
 
-              {patientInvoices.length === 0 ? (
+              {safeInvoices.length === 0 ? (
                 <div className="p-12 text-center space-y-3 bg-surface rounded-xl border border-surface-border text-text-secondary text-xs">
                   <CreditCard className="w-10 h-10 text-primary/40 mx-auto" />
                   <p className="font-semibold text-text-primary">No invoices generated yet</p>
@@ -574,7 +584,7 @@ export default function PatientProfilePage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {patientInvoices.map((inv) => (
+                    {safeInvoices.map((inv) => (
                       <TableRow key={inv.id}>
                         <TableCell className="font-mono font-bold text-primary">
                           {inv.invoiceCode}
@@ -633,7 +643,13 @@ export default function PatientProfilePage() {
       <CreateInvoiceModal
         isOpen={isCreateInvoiceOpen}
         onClose={() => setIsCreateInvoiceOpen(false)}
-        onSuccess={fetchPatientData}
+        onSuccess={(createdInvoice) => {
+          fetchPatientData();
+          if (createdInvoice?.id) {
+            setSelectedInvoiceId(createdInvoice.id);
+            setIsDetailOpen(true);
+          }
+        }}
         initialPatientId={patient.id}
         initialPatientName={`${patient.firstName} ${patient.lastName}`}
       />

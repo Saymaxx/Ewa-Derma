@@ -6,12 +6,12 @@ import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useToast } from '@/components/ui/Toast';
-import { Plus, Trash2, Tag, Percent, IndianRupee } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 
 interface CreateInvoiceModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (newInvoice?: any) => void;
   initialPatientId?: string;
   initialPatientName?: string;
 }
@@ -60,35 +60,66 @@ export default function CreateInvoiceModal({
 
   useEffect(() => {
     if (isOpen) {
-      if (initialPatientId) setSelectedPatientId(initialPatientId);
+      setSelectedPatientId(initialPatientId || '');
+      setDiscountAmount(0);
+      setDiscountReason('');
+      setTaxRate(0);
+      setNotes('');
+      setItems([
+        {
+          id: '1',
+          itemType: 'SERVICE',
+          description: '',
+          quantity: 1,
+          unitPrice: 0,
+          discount: 0,
+          taxRate: 0,
+        },
+      ]);
 
-      // Load patients & services
-      api.get('/patients').then((res) => setPatients(res.data.data.items || []));
-      api.get('/services').then((res) => {
-        const svcs = res.data.data || [];
-        setServices(svcs);
-        // Default first line item to Consultation service if empty
-        if (svcs.length > 0 && !items[0].description) {
-          const cons = svcs.find((s: any) => s.name.includes('Consultation')) || svcs[0];
-          setItems([
-            {
-              id: '1',
-              itemType: 'SERVICE',
-              serviceId: cons.id,
-              description: cons.name,
-              quantity: 1,
-              unitPrice: Number(cons.basePrice),
-              discount: 0,
-              taxRate: 0,
-            },
-          ]);
-        }
-      });
+      // Load patients safely
+      api
+        .get('/patients')
+        .then((res) => {
+          const raw = res?.data?.data?.items ?? res?.data?.data ?? res?.data;
+          setPatients(Array.isArray(raw) ? raw : []);
+        })
+        .catch(() => setPatients([]));
+
+      // Load services safely
+      api
+        .get('/services')
+        .then((res) => {
+          const raw = res?.data?.data ?? res?.data;
+          const svcs = Array.isArray(raw) ? raw : [];
+          setServices(svcs);
+
+          // Default first line item to Consultation service if empty
+          if (svcs.length > 0) {
+            const cons = svcs.find((s: any) => s.name?.includes('Consultation')) || svcs[0];
+            setItems([
+              {
+                id: '1',
+                itemType: 'SERVICE',
+                serviceId: cons.id,
+                description: cons.name,
+                quantity: 1,
+                unitPrice: Number(cons.basePrice),
+                discount: 0,
+                taxRate: 0,
+              },
+            ]);
+          }
+        })
+        .catch(() => setServices([]));
     }
   }, [isOpen, initialPatientId]);
 
+  const safeServices = Array.isArray(services) ? services : [];
+  const safePatients = Array.isArray(patients) ? patients : [];
+
   const handleAddServiceItem = (serviceId: string) => {
-    const svc = services.find((s) => s.id === serviceId);
+    const svc = safeServices.find((s) => s.id === serviceId);
     if (!svc) return;
 
     setItems((prev) => [
@@ -132,7 +163,7 @@ export default function CreateInvoiceModal({
         if (item.id === id) {
           const updated = { ...item, [field]: value };
           if (field === 'serviceId') {
-            const s = services.find((svc) => svc.id === value);
+            const s = safeServices.find((svc) => svc.id === value);
             if (s) {
               updated.description = s.name;
               updated.unitPrice = Number(s.basePrice);
@@ -148,77 +179,92 @@ export default function CreateInvoiceModal({
   // Subtotal & Calculations
   const subTotal = items.reduce((acc, item) => acc + item.unitPrice * item.quantity, 0);
   const netBeforeTax = Math.max(0, subTotal - (discountAmount || 0));
-  const taxAmount = (netBeforeTax * (taxRate || 0)) / 100;
-  const totalAmount = netBeforeTax + taxAmount;
+  const calculatedTax = (netBeforeTax * (taxRate || 0)) / 100;
+  const totalAmount = netBeforeTax + calculatedTax;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     if (!selectedPatientId) {
-      showToast('Please select a patient', 'error');
-      return;
-    }
-    if (discountAmount > 0 && !discountReason.trim()) {
-      showToast('Discount reason is required when a discount is applied', 'error');
+      showToast('Please select a patient from the list', 'error');
       return;
     }
 
-    const invalidItem = items.find((i) => !i.description.trim() || i.unitPrice < 0);
-    if (invalidItem) {
-      showToast('Please complete all line item descriptions and valid prices', 'error');
+    const invalidItems = items.filter((i) => !i.description || i.quantity <= 0);
+    if (invalidItems.length > 0) {
+      showToast('Please complete all line item descriptions and quantities', 'error');
+      return;
+    }
+
+    if (discountAmount > 0 && (!discountReason || !discountReason.trim())) {
+      showToast('Please provide a discount reason whenever a discount is applied', 'error');
       return;
     }
 
     setIsLoading(true);
     try {
-      await api.post('/invoices', {
+      const payload = {
         patientId: selectedPatientId,
-        discountAmount,
-        discountReason,
-        taxRate,
-        notes,
+        discountAmount: Number(discountAmount) || 0,
+        discountReason: discountReason || undefined,
+        taxRate: Number(taxRate) || 0,
+        notes: notes || undefined,
         items: items.map((i) => ({
           itemType: i.itemType,
           serviceId: i.serviceId || undefined,
           medicineId: i.medicineId || undefined,
           description: i.description,
-          quantity: i.quantity,
-          unitPrice: i.unitPrice,
-          discount: i.discount,
-          taxRate: i.taxRate,
+          quantity: Number(i.quantity),
+          unitPrice: Number(i.unitPrice),
+          discount: Number(i.discount) || 0,
+          taxRate: Number(i.taxRate) || 0,
         })),
-      });
+      };
 
-      showToast('Invoice generated successfully', 'success');
-      onSuccess();
+      const res = await api.post('/invoices', payload);
+      const createdInvoice = res?.data?.data ?? res?.data;
+      showToast(res.data?.message || 'Invoice generated successfully!', 'success');
+      onSuccess(createdInvoice);
       onClose();
     } catch (err: any) {
-      showToast(err.response?.data?.error?.message || 'Failed to create invoice', 'error');
+      let errMsg = 'Failed to generate invoice';
+      if (err.response?.data?.message) {
+        errMsg = Array.isArray(err.response.data.message)
+          ? err.response.data.message.join(', ')
+          : err.response.data.message;
+      } else if (err.response?.data?.error?.message) {
+        errMsg = err.response.data.error.message;
+      }
+      showToast(errMsg, 'error');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Create New Invoice" maxWidth="xl">
-      <form onSubmit={handleSubmit} className="space-y-5 text-text-main">
-        {/* Patient Selection */}
-        <div>
-          <label className="text-xs font-semibold text-text-secondary block mb-1">
-            Patient <span className="text-red-500">*</span>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Generate Patient Invoice"
+      maxWidth="xl"
+    >
+      <div className="space-y-5">
+        {/* Patient Selection Header */}
+        <div className="bg-surface p-4 rounded-2xl border border-surface-border space-y-2">
+          <label className="text-xs font-bold text-text-secondary uppercase tracking-wider block">
+            Select Patient <span className="text-red-500">*</span>
           </label>
-          {initialPatientId ? (
-            <div className="p-2.5 bg-primary-50 rounded-xl border border-primary/20 text-sm font-semibold text-primary">
-              {initialPatientName || 'Selected Patient'}
+
+          {initialPatientName ? (
+            <div className="h-10 rounded-xl bg-white border border-surface-border px-3.5 flex items-center font-bold text-xs text-text-main">
+              {initialPatientName}
             </div>
           ) : (
             <select
               value={selectedPatientId}
               onChange={(e) => setSelectedPatientId(e.target.value)}
-              className="w-full h-10 rounded-xl border border-surface-border bg-white px-3 text-sm focus:border-primary focus:outline-none"
-              required
+              className="w-full h-10 rounded-xl border border-surface-border bg-white px-3.5 text-xs font-semibold text-text-main focus:border-primary focus:outline-none"
             >
               <option value="">-- Select Patient --</option>
-              {patients.map((p) => (
+              {safePatients.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.patientCode} - {p.firstName} {p.lastName} ({p.phone})
                 </option>
@@ -242,7 +288,7 @@ export default function CreateInvoiceModal({
                 className="h-8 rounded-lg border border-surface-border bg-white px-2.5 text-xs text-primary font-semibold focus:outline-none"
               >
                 <option value="">+ Add Service Item...</option>
-                {services.map((s) => (
+                {safeServices.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name} (₹{s.basePrice})
                   </option>
@@ -254,7 +300,7 @@ export default function CreateInvoiceModal({
                 className="px-2.5 py-1 text-xs rounded-lg border border-gray-200 bg-surface hover:bg-gray-100 text-text-secondary font-medium flex items-center gap-1"
               >
                 <Plus className="w-3.5 h-3.5" />
-                Add Prescribed Item
+                Add Custom Item
               </button>
             </div>
           </div>
@@ -292,7 +338,7 @@ export default function CreateInvoiceModal({
                           onChange={(e) => handleItemChange(item.id, 'serviceId', e.target.value)}
                           className="w-full h-8 rounded-lg border border-surface-border px-2 text-xs"
                         >
-                          {services.map((s) => (
+                          {safeServices.map((s) => (
                             <option key={s.id} value={s.id}>
                               {s.name}
                             </option>
@@ -348,69 +394,82 @@ export default function CreateInvoiceModal({
 
         {/* Discount & Tax Section */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-surface p-4 rounded-2xl border border-surface-border">
-          <div className="space-y-3">
-            <div>
-              <label className="text-xs font-semibold text-text-secondary block mb-1">
-                Invoice Discount (₹)
-              </label>
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-text-secondary block">Discount (₹)</label>
+            <div className="relative">
+              <span className="absolute left-3 top-2.5 text-xs text-text-muted">₹</span>
               <Input
                 type="number"
                 min="0"
-                value={discountAmount}
+                value={discountAmount || ''}
                 onChange={(e) => setDiscountAmount(parseFloat(e.target.value) || 0)}
                 placeholder="0.00"
-                className="text-xs"
+                className="pl-7 text-xs"
               />
             </div>
-            {discountAmount > 0 && (
-              <div>
-                <label className="text-xs font-semibold text-red-600 block mb-1">
-                  Discount Reason / Audit Note <span className="text-red-500">*</span>
-                </label>
-                <Input
-                  type="text"
-                  value={discountReason}
-                  onChange={(e) => setDiscountReason(e.target.value)}
-                  placeholder="e.g. Festival Offer, Doctor Approval, Staff Family"
-                  className="text-xs border-red-300 focus:border-red-500"
-                  required
-                />
-              </div>
-            )}
+            <Input
+              type="text"
+              value={discountReason}
+              onChange={(e) => setDiscountReason(e.target.value)}
+              placeholder="Discount Reason (e.g. Promotional offer)"
+              className="text-xs"
+            />
           </div>
 
-          <div className="space-y-2 text-xs text-text-secondary self-end">
-            <div className="flex justify-between py-1 border-b border-surface-border">
-              <span>Subtotal:</span>
-              <span className="font-semibold text-text-main">₹{subTotal.toFixed(2)}</span>
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-text-secondary block">Tax Rate (GST %)</label>
+            <div className="relative">
+              <span className="absolute left-3 top-2.5 text-xs text-text-muted">%</span>
+              <Input
+                type="number"
+                min="0"
+                max="100"
+                value={taxRate || ''}
+                onChange={(e) => setTaxRate(parseFloat(e.target.value) || 0)}
+                placeholder="0"
+                className="pl-7 text-xs"
+              />
             </div>
-            {discountAmount > 0 && (
-              <div className="flex justify-between py-1 border-b border-surface-border text-emerald-700 font-semibold">
-                <span>Discount:</span>
-                <span>- ₹{discountAmount.toFixed(2)}</span>
-              </div>
-            )}
-            <div className="flex justify-between py-1 border-b border-surface-border">
-              <span>Tax ({taxRate}%):</span>
-              <span>₹{taxAmount.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between py-2 text-sm font-bold text-primary border-t border-primary/20">
-              <span>Total Payable:</span>
-              <span>₹{totalAmount.toFixed(2)}</span>
-            </div>
+            <Input
+              type="text"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Invoice Notes / Payment Instructions"
+              className="text-xs"
+            />
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex justify-end gap-3 pt-2">
-          <Button variant="outline" type="button" onClick={onClose}>
+        {/* Total Summary Footer */}
+        <div className="bg-primary/5 border border-primary/20 p-4 rounded-2xl flex items-center justify-between">
+          <div className="space-y-1">
+            <div className="text-xs text-text-secondary flex items-center gap-4">
+              <span>Subtotal: <strong>₹{subTotal.toFixed(2)}</strong></span>
+              <span>Discount: <strong className="text-red-600">-₹{discountAmount.toFixed(2)}</strong></span>
+              <span>GST ({taxRate}%): <strong>+₹{calculatedTax.toFixed(2)}</strong></span>
+            </div>
+            <div className="text-xs text-text-muted">
+              Official clinic invoice code will be generated automatically.
+            </div>
+          </div>
+          <div className="text-right">
+            <span className="text-xs text-text-secondary block uppercase font-bold tracking-wider">Total Amount Due</span>
+            <span className="text-2xl font-bold font-mono text-primary">
+              ₹{totalAmount.toFixed(2)}
+            </span>
+          </div>
+        </div>
+
+        {/* Modal Action Buttons */}
+        <div className="flex items-center justify-end gap-3 pt-2">
+          <Button variant="outline" onClick={onClose} disabled={isLoading}>
             Cancel
           </Button>
-          <Button variant="primary" type="submit" isLoading={isLoading}>
+          <Button variant="primary" onClick={handleSubmit} isLoading={isLoading}>
             Generate Invoice
           </Button>
         </div>
-      </form>
+      </div>
     </Modal>
   );
 }
