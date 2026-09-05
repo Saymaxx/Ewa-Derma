@@ -403,8 +403,8 @@ export default function InvoiceDetailModal({
           <h4 className="text-xs font-bold text-text-secondary uppercase tracking-wider mb-2">
             Line Items
           </h4>
-          <div className="border border-surface-border rounded-xl overflow-hidden bg-white">
-            <table className="w-full text-left text-xs">
+          <div className="border border-surface-border rounded-xl overflow-x-auto bg-white">
+            <table className="w-full min-w-[500px] text-left text-xs">
               <thead className="bg-gray-100 text-text-secondary font-semibold border-b border-surface-border">
                 <tr>
                   <th className="p-3">Type</th>
@@ -437,7 +437,7 @@ export default function InvoiceDetailModal({
 
         {/* Totals Summary */}
         <div className="flex justify-end">
-          <div className="w-full md:w-72 bg-surface p-3.5 rounded-xl border border-surface-border text-xs space-y-1.5">
+          <div className="w-full sm:w-72 bg-surface p-3.5 rounded-xl border border-surface-border text-xs space-y-1.5">
             <div className="flex justify-between text-text-secondary">
               <span>Subtotal:</span>
               <span className="font-semibold text-text-main">₹{Number(invoice.subTotal).toFixed(2)}</span>
@@ -475,8 +475,8 @@ export default function InvoiceDetailModal({
           {invoice.payments?.length === 0 ? (
             <p className="text-xs text-text-secondary italic">No payments recorded yet.</p>
           ) : (
-            <div className="border border-surface-border rounded-xl overflow-hidden bg-white">
-              <table className="w-full text-left text-xs">
+            <div className="border border-surface-border rounded-xl overflow-x-auto bg-white">
+              <table className="w-full min-w-[500px] text-left text-xs">
                 <thead className="bg-gray-100 text-text-secondary font-semibold border-b border-surface-border">
                   <tr>
                     <th className="p-2.5">Date</th>

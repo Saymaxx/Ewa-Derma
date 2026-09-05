@@ -326,8 +326,8 @@ export default function CreateInvoiceModal({
             </div>
           </div>
 
-          <div className="border border-surface-border rounded-2xl overflow-hidden bg-surface">
-            <table className="w-full text-left text-xs">
+          <div className="border border-surface-border rounded-2xl overflow-x-auto bg-surface">
+            <table className="w-full min-w-[520px] text-left text-xs">
               <thead className="bg-gray-100 text-text-secondary font-semibold border-b border-surface-border">
                 <tr>
                   <th className="p-3">Type</th>
@@ -462,9 +462,9 @@ export default function CreateInvoiceModal({
         </div>
 
         {/* Total Summary Footer */}
-        <div className="bg-primary/5 border border-primary/20 p-4 rounded-2xl flex items-center justify-between">
+        <div className="bg-primary/5 border border-primary/20 p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="space-y-1">
-            <div className="text-xs text-text-secondary flex items-center gap-4">
+            <div className="text-xs text-text-secondary flex flex-wrap items-center gap-x-4 gap-y-1">
               <span>Subtotal: <strong>₹{subTotal.toFixed(2)}</strong></span>
               <span>Discount: <strong className="text-red-600">-₹{discountAmount.toFixed(2)}</strong></span>
               <span>GST ({taxRate}%): <strong>+₹{calculatedTax.toFixed(2)}</strong></span>
@@ -473,7 +473,7 @@ export default function CreateInvoiceModal({
               Official clinic invoice code will be generated automatically.
             </div>
           </div>
-          <div className="text-right">
+          <div className="text-left sm:text-right pt-2 sm:pt-0 border-t sm:border-t-0 border-primary/10">
             <span className="text-xs text-text-secondary block uppercase font-bold tracking-wider">Total Amount Due</span>
             <span className="text-2xl font-bold font-mono text-primary">
               ₹{totalAmount.toFixed(2)}

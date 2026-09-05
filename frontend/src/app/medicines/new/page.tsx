@@ -257,7 +257,7 @@ export default function AddNewMedicinePage() {
                 <label className="text-xs font-semibold text-text-main block mb-1">
                   Packaging / Unit Formulation <span className="text-red-500">*</span>
                 </label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className={unit === 'OTHER' ? 'grid grid-cols-1 sm:grid-cols-2 gap-2' : ''}>
                   <select
                     value={unit}
                     onChange={(e) => setUnit(e.target.value)}

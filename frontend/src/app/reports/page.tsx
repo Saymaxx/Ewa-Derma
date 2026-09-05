@@ -327,11 +327,11 @@ export default function ReportsPage() {
 
       {/* 3. EXTENSIBLE TAB REGISTRY SELECTOR (PHASE 7b COMPLETE) */}
       <div className="flex flex-wrap items-center justify-between border-b border-surface-border pb-3 gap-2">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1 max-w-full">
           <button
             type="button"
             onClick={() => setActiveTab('appointments')}
-            className={`px-4 py-2 rounded-xl font-semibold text-xs transition-all flex items-center gap-2 ${
+            className={`px-3.5 sm:px-4 py-2 rounded-xl font-semibold text-xs transition-all flex items-center gap-2 shrink-0 whitespace-nowrap ${
               activeTab === 'appointments'
                 ? 'bg-primary text-white shadow-xs'
                 : 'bg-surface text-text-secondary hover:bg-gray-100'
@@ -344,7 +344,7 @@ export default function ReportsPage() {
           <button
             type="button"
             onClick={() => setActiveTab('patients')}
-            className={`px-4 py-2 rounded-xl font-semibold text-xs transition-all flex items-center gap-2 ${
+            className={`px-3.5 sm:px-4 py-2 rounded-xl font-semibold text-xs transition-all flex items-center gap-2 shrink-0 whitespace-nowrap ${
               activeTab === 'patients'
                 ? 'bg-primary text-white shadow-xs'
                 : 'bg-surface text-text-secondary hover:bg-gray-100'
@@ -358,7 +358,7 @@ export default function ReportsPage() {
             <button
               type="button"
               onClick={() => setActiveTab('revenue')}
-              className={`px-4 py-2 rounded-xl font-semibold text-xs transition-all flex items-center gap-2 ${
+              className={`px-3.5 sm:px-4 py-2 rounded-xl font-semibold text-xs transition-all flex items-center gap-2 shrink-0 whitespace-nowrap ${
                 activeTab === 'revenue'
                   ? 'bg-primary text-white shadow-xs'
                   : 'bg-surface text-text-secondary hover:bg-gray-100'
@@ -373,7 +373,7 @@ export default function ReportsPage() {
             <button
               type="button"
               onClick={() => setActiveTab('inventory')}
-              className={`px-4 py-2 rounded-xl font-semibold text-xs transition-all flex items-center gap-2 ${
+              className={`px-3.5 sm:px-4 py-2 rounded-xl font-semibold text-xs transition-all flex items-center gap-2 shrink-0 whitespace-nowrap ${
                 activeTab === 'inventory'
                   ? 'bg-primary text-white shadow-xs'
                   : 'bg-surface text-text-secondary hover:bg-gray-100'

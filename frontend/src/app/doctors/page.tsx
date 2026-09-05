@@ -224,7 +224,7 @@ export default function DoctorsPage() {
             required
           />
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
               label="Qualification"
               value={editForm.qualification}
@@ -237,7 +237,7 @@ export default function DoctorsPage() {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
               label="Consultation Fee (₹)"
               type="number"

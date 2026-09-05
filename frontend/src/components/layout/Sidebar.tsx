@@ -4,13 +4,13 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
+import { Logo } from '../ui/Logo';
 import { clsx } from 'clsx';
 import {
   LayoutDashboard,
   Users,
   Calendar,
   Stethoscope,
-  FileText,
   CreditCard,
   Package,
   PackagePlus,
@@ -19,10 +19,10 @@ import {
   FileSpreadsheet,
   Settings,
   ShieldCheck,
-  Palette,
   Clock,
   UserCog,
   Bell,
+  X,
 } from 'lucide-react';
 
 interface NavItem {
@@ -32,7 +32,12 @@ interface NavItem {
   roles?: ('ADMIN' | 'DOCTOR' | 'RECEPTIONIST' | 'INVENTORY_MANAGER')[];
 }
 
-export const Sidebar: React.FC = () => {
+interface SidebarProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => {
   const pathname = usePathname();
   const { user } = useAuth();
 
@@ -138,9 +143,9 @@ export const Sidebar: React.FC = () => {
     return item.roles.some((r) => user.roles.includes(r));
   });
 
-  return (
-    <aside className="w-64 bg-white border-r border-surface-border flex flex-col justify-between shrink-0 min-h-[calc(100vh-4rem)]">
-      <div className="p-4 space-y-1">
+  const renderNavContent = () => (
+    <>
+      <div className="p-4 space-y-1 overflow-y-auto flex-1 overscroll-contain">
         <div className="px-3 py-2 text-xs font-bold text-text-muted uppercase tracking-wider">
           Navigation Menu
         </div>
@@ -171,6 +176,7 @@ export const Sidebar: React.FC = () => {
               <Link
                 key={item.label}
                 href={item.href}
+                onClick={() => onClose?.()}
                 className={clsx(
                   'flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 relative group',
                   isActive
@@ -198,13 +204,61 @@ export const Sidebar: React.FC = () => {
       </div>
 
       {/* Footer Info in Sidebar */}
-      <div className="p-4 border-t border-surface-border bg-surface/50">
+      <div className="p-4 border-t border-surface-border bg-surface/50 shrink-0">
         <div className="text-xs text-text-muted space-y-1">
           <p className="font-medium text-text-primary">Ewa Derma Clinic</p>
           <p className="text-[11px]">Clinic Management System</p>
           <p className="text-[10px] text-accent font-semibold">v1.0.0 Production Ready</p>
         </div>
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* 1. Desktop Sidebar: Permanently docked at lg and above */}
+      <aside className="hidden lg:flex w-64 bg-white border-r border-surface-border flex-col justify-between shrink-0 min-h-[calc(100vh-4rem)]">
+        {renderNavContent()}
+      </aside>
+
+      {/* 2. Mobile/Tablet Off-Canvas Drawer (Below lg breakpoint) */}
+      <div
+        className={clsx(
+          'fixed inset-0 z-50 lg:hidden transition-all duration-300',
+          isOpen ? 'visible opacity-100 pointer-events-auto' : 'invisible opacity-0 pointer-events-none',
+        )}
+      >
+        {/* Dimmed Backdrop */}
+        <div
+          className="fixed inset-0 bg-black/40 backdrop-blur-xs transition-opacity duration-300"
+          onClick={onClose}
+          aria-hidden="true"
+        />
+
+        {/* Drawer Panel */}
+        <aside
+          className={clsx(
+            'relative z-50 w-72 max-w-[85vw] h-full bg-white shadow-2xl flex flex-col justify-between transform transition-transform duration-300 ease-in-out',
+            isOpen ? 'translate-x-0' : '-translate-x-full',
+          )}
+        >
+          {/* Mobile Drawer Top Header with Logo & Close Button */}
+          <div className="flex items-center justify-between h-16 px-4 border-b border-surface-border bg-white shrink-0">
+            <Logo size="sm" />
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close menu"
+              className="p-1.5 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {renderNavContent()}
+        </aside>
+      </div>
+    </>
   );
 };
+

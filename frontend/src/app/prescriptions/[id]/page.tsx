@@ -492,8 +492,8 @@ export default function PrescriptionDetailPage() {
                 key={idx}
                 className="p-3 rounded-lg bg-surface border border-surface-border space-y-2"
               >
-                <div className="grid grid-cols-12 gap-2">
-                  <div className="col-span-5">
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
+                  <div className="sm:col-span-5">
                     <Input
                       placeholder="Medicine Name"
                       value={item.medicineName}
@@ -505,7 +505,7 @@ export default function PrescriptionDetailPage() {
                       required
                     />
                   </div>
-                  <div className="col-span-3">
+                  <div className="sm:col-span-3">
                     <Input
                       placeholder="Dosage"
                       value={item.dosage}
@@ -517,7 +517,7 @@ export default function PrescriptionDetailPage() {
                       required
                     />
                   </div>
-                  <div className="col-span-3">
+                  <div className="sm:col-span-3">
                     <Input
                       placeholder="Frequency"
                       value={item.frequency}
@@ -529,13 +529,13 @@ export default function PrescriptionDetailPage() {
                       required
                     />
                   </div>
-                  <div className="col-span-1 flex justify-end">
+                  <div className="sm:col-span-1 flex justify-end pt-1 sm:pt-0">
                     <button
                       type="button"
                       onClick={() =>
                         setRevisionItems(revisionItems.filter((_, i) => i !== idx))
                       }
-                      className="p-1 text-text-muted hover:text-status-danger"
+                      className="p-1.5 text-text-muted hover:text-status-danger hover:bg-red-50 rounded transition-colors"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>

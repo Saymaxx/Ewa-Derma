@@ -23,7 +23,7 @@ export const Tabs: React.FC<TabsProps> = ({
   className,
 }) => {
   return (
-    <div className={twMerge(clsx('flex items-center gap-1 border-b border-surface-border', className))}>
+    <div className={twMerge(clsx('flex items-center gap-1 border-b border-surface-border overflow-x-auto scrollbar-none', className))}>
       {tabs.map((tab) => {
         const isActive = tab.id === activeTab;
         return (
@@ -31,7 +31,7 @@ export const Tabs: React.FC<TabsProps> = ({
             key={tab.id}
             onClick={() => onChange(tab.id)}
             className={clsx(
-              'flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-all -mb-px relative focus:outline-none',
+              'flex items-center gap-2 px-3.5 sm:px-4 py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-all -mb-px relative focus:outline-none shrink-0 whitespace-nowrap',
               isActive
                 ? 'border-primary text-primary font-semibold'
                 : 'border-transparent text-text-secondary hover:text-text-primary hover:border-gray-300',
@@ -39,6 +39,7 @@ export const Tabs: React.FC<TabsProps> = ({
           >
             {tab.icon && <span className="shrink-0">{tab.icon}</span>}
             <span>{tab.label}</span>
+
             {tab.count !== undefined && (
               <span
                 className={clsx(
