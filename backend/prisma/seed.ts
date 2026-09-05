@@ -179,6 +179,7 @@ async function main() {
         lastName: u.lastName,
         username: u.username,
         phoneNumber: u.phone,
+        passwordHash: defaultPassword,
         isActive: true,
       },
       create: {

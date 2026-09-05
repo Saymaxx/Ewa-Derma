@@ -179,10 +179,16 @@ export default function LoginPage() {
       await login(identifier, password);
       showToast('Login successful! Directing to workspace...', 'success');
     } catch (err: any) {
-      const msg =
-        err.response?.data?.error?.message ||
-        err.response?.data?.message ||
-        'Invalid login credentials';
+      let msg = 'Invalid login credentials';
+      if (err.response?.data?.error?.message) {
+        msg = err.response.data.error.message;
+      } else if (err.response?.data?.message) {
+        msg = err.response.data.message;
+      } else if (err.code === 'ERR_NETWORK' || !err.response) {
+        msg = 'Unable to connect to backend server. Please check your network or NEXT_PUBLIC_API_URL.';
+      } else if (err.message) {
+        msg = err.message;
+      }
       showToast(msg, 'error', 'Authentication Failed');
     } finally {
       setIsLoading(false);
