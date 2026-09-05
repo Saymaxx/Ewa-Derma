@@ -76,9 +76,9 @@ async function bootstrap() {
     `,
   });
 
-  await app.listen(port);
-  logger.log(`🚀 Ewa Derma Clinic Backend running on: http://localhost:${port}/api`);
-  logger.log(`📚 Swagger Documentation reachable at: http://localhost:${port}/api/docs`);
+  await app.listen(port, '0.0.0.0');
+  logger.log(`🚀 Ewa Derma Clinic Backend running on port ${port} (0.0.0.0)`);
+  logger.log(`📚 Swagger Documentation reachable at: /api/docs`);
 }
 
 bootstrap();

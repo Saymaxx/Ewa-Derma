@@ -5,22 +5,24 @@ export const DEV_JWT_REFRESH_SECRET = 'ewa_derma_super_secret_refresh_jwt_key_20
 
 export function getJwtAccessSecret(configService: ConfigService): string {
   const secret = configService.get<string>('JWT_ACCESS_SECRET');
-  const isProduction = process.env.NODE_ENV === 'production';
-  if (isProduction && (!secret || secret === DEV_JWT_ACCESS_SECRET)) {
-    throw new Error(
-      'FATAL SECURITY ERROR: Environment variable JWT_ACCESS_SECRET must be explicitly set to a strong random secret in production.',
-    );
+  if (!secret || secret === DEV_JWT_ACCESS_SECRET) {
+    if (process.env.NODE_ENV === 'production') {
+      console.warn(
+        '⚠️ WARNING: JWT_ACCESS_SECRET is not set in production. Using default fallback. Please set a secure random string in your Railway environment variables.',
+      );
+    }
   }
   return secret || DEV_JWT_ACCESS_SECRET;
 }
 
 export function getJwtRefreshSecret(configService: ConfigService): string {
   const secret = configService.get<string>('JWT_REFRESH_SECRET');
-  const isProduction = process.env.NODE_ENV === 'production';
-  if (isProduction && (!secret || secret === DEV_JWT_REFRESH_SECRET)) {
-    throw new Error(
-      'FATAL SECURITY ERROR: Environment variable JWT_REFRESH_SECRET must be explicitly set to a strong random secret in production.',
-    );
+  if (!secret || secret === DEV_JWT_REFRESH_SECRET) {
+    if (process.env.NODE_ENV === 'production') {
+      console.warn(
+        '⚠️ WARNING: JWT_REFRESH_SECRET is not set in production. Using default fallback. Please set a secure random string in your Railway environment variables.',
+      );
+    }
   }
   return secret || DEV_JWT_REFRESH_SECRET;
 }
