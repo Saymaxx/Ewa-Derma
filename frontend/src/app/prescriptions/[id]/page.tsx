@@ -113,10 +113,33 @@ export default function PrescriptionDetailPage() {
     }
   };
 
-  const handleDownloadPdf = () => {
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+
+  const handleDownloadPdf = async () => {
     if (!prescription) return;
-    const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api'}/prescriptions/${prescription.id}/pdf`;
-    window.open(url, '_blank');
+    setIsDownloadingPdf(true);
+    try {
+      const response = await api.get(`/prescriptions/${prescription.id}/pdf`, {
+        responseType: 'blob',
+      });
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute(
+        'download',
+        `Prescription-${prescription.prescriptionCode || prescription.id}.pdf`,
+      );
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      showToast('Prescription PDF downloaded successfully', 'success');
+    } catch (err: any) {
+      showToast('Failed to download prescription PDF', 'error');
+    } finally {
+      setIsDownloadingPdf(false);
+    }
   };
 
   const openRevisionModal = () => {
@@ -264,6 +287,7 @@ export default function PrescriptionDetailPage() {
             variant="outline"
             size="sm"
             leftIcon={<Download className="w-4 h-4" />}
+            isLoading={isDownloadingPdf}
             onClick={handleDownloadPdf}
           >
             PDF

@@ -276,10 +276,33 @@ export default function NewConsultationPage() {
     }
   };
 
-  const handleDownloadPdf = () => {
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+
+  const handleDownloadPdf = async () => {
     if (!completedData?.prescriptionId) return;
-    const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api'}/prescriptions/${completedData.prescriptionId}/pdf`;
-    window.open(url, '_blank');
+    setIsDownloadingPdf(true);
+    try {
+      const response = await api.get(`/prescriptions/${completedData.prescriptionId}/pdf`, {
+        responseType: 'blob',
+      });
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute(
+        'download',
+        `Prescription-${completedData.prescriptionCode || 'document'}.pdf`,
+      );
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      showToast('Prescription PDF downloaded successfully', 'success');
+    } catch (err: any) {
+      showToast('Failed to download prescription PDF', 'error');
+    } finally {
+      setIsDownloadingPdf(false);
+    }
   };
 
   if (isLoadingApt) {
@@ -727,6 +750,7 @@ export default function NewConsultationPage() {
                 variant="accent"
                 className="w-full mt-2"
                 leftIcon={<Download className="w-4 h-4" />}
+                isLoading={isDownloadingPdf}
                 onClick={handleDownloadPdf}
               >
                 Download Prescription PDF

@@ -56,6 +56,30 @@ export default function PatientProfilePage() {
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isCreateInvoiceOpen, setIsCreateInvoiceOpen] = useState(false);
+  const [downloadingRxId, setDownloadingRxId] = useState<string | null>(null);
+
+  const handleDownloadRxPdf = async (rxId: string, rxCode?: string) => {
+    setDownloadingRxId(rxId);
+    try {
+      const response = await api.get(`/prescriptions/${rxId}/pdf`, {
+        responseType: 'blob',
+      });
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Prescription-${rxCode || rxId}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      showToast('Prescription PDF downloaded', 'success');
+    } catch {
+      showToast('Failed to download prescription PDF', 'error');
+    } finally {
+      setDownloadingRxId(null);
+    }
+  };
 
   const fetchPatientData = useCallback(async () => {
     setIsLoading(true);
@@ -502,15 +526,15 @@ export default function PatientProfilePage() {
                               View Details & Revisions
                             </Button>
                           </Link>
-                          <a
-                            href={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api'}/prescriptions/${rx.id}/pdf`}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                          <Button
+                            size="sm"
+                            variant="primary"
+                            leftIcon={<Download className="w-3.5 h-3.5" />}
+                            isLoading={downloadingRxId === rx.id}
+                            onClick={() => handleDownloadRxPdf(rx.id, rx.prescriptionCode)}
                           >
-                            <Button size="sm" variant="primary" leftIcon={<Download className="w-3.5 h-3.5" />}>
-                              PDF Letterhead
-                            </Button>
-                          </a>
+                            PDF Letterhead
+                          </Button>
                         </div>
                       </div>
 
