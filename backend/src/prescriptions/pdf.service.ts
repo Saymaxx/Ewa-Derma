@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { getClinicLogoBuffer } from '../common/utils/logo.util';
 
 export interface PrescriptionPdfData {
   clinicName: string;
@@ -92,6 +93,37 @@ export class PdfService {
       font: fontRegular,
       color: rgb(0.9, 0.93, 0.98),
     });
+
+    // Embed Clinic Logo Image in Header (Right Side)
+    const logoBuffer = getClinicLogoBuffer();
+    if (logoBuffer) {
+      try {
+        const logoImg = await pdfDoc.embedJpg(logoBuffer);
+        const logoSize = 64;
+        const logoX = width - 35 - logoSize;
+        const logoY = height - headerHeight + (headerHeight - logoSize) / 2;
+
+        // Subtle white container backing for crisp emblem display
+        page.drawRectangle({
+          x: logoX - 3,
+          y: logoY - 3,
+          width: logoSize + 6,
+          height: logoSize + 6,
+          color: rgb(1, 1, 1),
+          borderColor: accentGold,
+          borderWidth: 1.5,
+        });
+
+        page.drawImage(logoImg, {
+          x: logoX,
+          y: logoY,
+          width: logoSize,
+          height: logoSize,
+        });
+      } catch (err: any) {
+        this.logger.warn(`Could not embed logo image: ${err.message}`);
+      }
+    }
 
     // 2. DOCTOR & PRESCRIPTION METADATA BAR
     let currentY = height - headerHeight - 28;

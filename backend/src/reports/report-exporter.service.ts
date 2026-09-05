@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { getClinicLogoBuffer } from '../common/utils/logo.util';
 
 @Injectable()
 export class ReportExporterService {
@@ -235,6 +236,33 @@ export class ReportExporterService {
     return lines.join('\n');
   }
 
+  private async drawHeaderLogo(pdfDoc: PDFDocument, page: any) {
+    const logoBuffer = getClinicLogoBuffer();
+    if (logoBuffer) {
+      try {
+        const logoImg = await pdfDoc.embedJpg(logoBuffer);
+        const logoSize = 44;
+        page.drawRectangle({
+          x: 510 - 2,
+          y: 765 - 2,
+          width: logoSize + 4,
+          height: logoSize + 4,
+          color: rgb(1, 1, 1),
+          borderColor: rgb(0.788, 0.635, 0.294),
+          borderWidth: 1,
+        });
+        page.drawImage(logoImg, {
+          x: 510,
+          y: 765,
+          width: logoSize,
+          height: logoSize,
+        });
+      } catch {
+        // Fallback silently if logo buffer cannot be read
+      }
+    }
+  }
+
   // -------------------------------------------------------------------
   // PDF GENERATION VIA PDF-LIB
   // -------------------------------------------------------------------
@@ -248,6 +276,8 @@ export class ReportExporterService {
     const goldColor = rgb(0.788, 0.635, 0.294); // #C9A24B
     const darkTextColor = rgb(0.12, 0.16, 0.22);
     const mutedTextColor = rgb(0.45, 0.5, 0.58);
+
+    await this.drawHeaderLogo(pdfDoc, page);
 
     let y = 800;
 
@@ -340,6 +370,8 @@ export class ReportExporterService {
     const darkTextColor = rgb(0.12, 0.16, 0.22);
     const mutedTextColor = rgb(0.45, 0.5, 0.58);
 
+    await this.drawHeaderLogo(pdfDoc, page);
+
     let y = 800;
 
     page.drawText('EWA DERMA CLINIC', { x: 40, y, size: 20, font: fontBold, color: primaryColor });
@@ -426,6 +458,8 @@ export class ReportExporterService {
     const accentGold = rgb(201 / 255, 162 / 255, 75 / 255);
     const darkTextColor = rgb(0.12, 0.16, 0.22);
     const mutedTextColor = rgb(0.45, 0.5, 0.58);
+
+    await this.drawHeaderLogo(pdfDoc, page);
 
     let y = 800;
 
@@ -523,6 +557,8 @@ export class ReportExporterService {
     const accentGold = rgb(201 / 255, 162 / 255, 75 / 255);
     const darkTextColor = rgb(0.12, 0.16, 0.22);
     const mutedTextColor = rgb(0.45, 0.5, 0.58);
+
+    await this.drawHeaderLogo(pdfDoc, page);
 
     let y = 800;
 

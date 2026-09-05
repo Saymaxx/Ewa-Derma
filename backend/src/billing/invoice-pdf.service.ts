@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { getClinicLogoBuffer } from '../common/utils/logo.util';
 
 export interface InvoicePdfData {
   clinicName: string;
@@ -79,27 +80,60 @@ export class InvoicePdfService {
       color: accentGold,
     });
 
+    // Embed Clinic Logo Image (Left Side of Header)
+    let textStartX = 35;
+    const logoBuffer = getClinicLogoBuffer();
+    if (logoBuffer) {
+      try {
+        const logoImg = await pdfDoc.embedJpg(logoBuffer);
+        const logoSize = 60;
+        const logoX = 35;
+        const logoY = height - headerHeight + (headerHeight - logoSize) / 2;
+
+        page.drawRectangle({
+          x: logoX - 2,
+          y: logoY - 2,
+          width: logoSize + 4,
+          height: logoSize + 4,
+          color: rgb(1, 1, 1),
+          borderColor: accentGold,
+          borderWidth: 1.5,
+        });
+
+        page.drawImage(logoImg, {
+          x: logoX,
+          y: logoY,
+          width: logoSize,
+          height: logoSize,
+        });
+
+        textStartX = 108;
+      } catch (err: any) {
+        this.logger.warn(`Could not embed logo image in invoice: ${err.message}`);
+      }
+    }
+
     // Clinic Title
     page.drawText(data.clinicName.toUpperCase(), {
-      x: 35,
+      x: textStartX,
       y: height - 35,
-      size: 18,
+      size: 16,
       font: fontBold,
       color: rgb(1, 1, 1),
     });
 
     page.drawText(data.clinicAddress, {
-      x: 35,
+      x: textStartX,
       y: height - 52,
-      size: 9,
+      size: 8.5,
       font: fontRegular,
       color: rgb(235 / 255, 230 / 255, 255 / 255),
     });
 
     page.drawText(`Phone: ${data.clinicPhone} ${data.clinicGst ? `| GSTIN: ${data.clinicGst}` : ''}`, {
-      x: 35,
+      x: textStartX,
       y: height - 67,
-      size: 9,
+      size: 8.5,
       font: fontRegular,
       color: rgb(235 / 255, 230 / 255, 255 / 255),
     });
