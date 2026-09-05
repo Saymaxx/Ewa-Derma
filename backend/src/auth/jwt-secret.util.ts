@@ -4,11 +4,13 @@ export const DEV_JWT_ACCESS_SECRET = 'ewa_derma_super_secret_access_jwt_key_2026
 export const DEV_JWT_REFRESH_SECRET = 'ewa_derma_super_secret_refresh_jwt_key_2026_clinical';
 
 export function getJwtAccessSecret(configService: ConfigService): string {
-  const secret = configService.get<string>('JWT_ACCESS_SECRET');
+  const secret =
+    configService.get<string>('JWT_ACCESS_SECRET') ||
+    configService.get<string>('JWT_SECRET');
   if (!secret || secret === DEV_JWT_ACCESS_SECRET) {
     if (process.env.NODE_ENV === 'production') {
       console.warn(
-        '⚠️ WARNING: JWT_ACCESS_SECRET is not set in production. Using default fallback. Please set a secure random string in your Railway environment variables.',
+        '⚠️ WARNING: JWT_ACCESS_SECRET (or JWT_SECRET) is not set in production. Using default fallback. Please set a secure random string in your Railway environment variables.',
       );
     }
   }
