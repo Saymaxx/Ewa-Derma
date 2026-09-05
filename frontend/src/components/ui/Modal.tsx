@@ -9,7 +9,7 @@ export interface ModalProps {
   title?: string;
   description?: string;
   children: React.ReactNode;
-  maxWidth?: 'sm' | 'md' | 'lg' | 'xl';
+  maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | 'full';
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -43,10 +43,14 @@ export const Modal: React.FC<ModalProps> = ({
     md: 'max-w-md',
     lg: 'max-w-lg',
     xl: 'max-w-xl',
+    '2xl': 'max-w-2xl',
+    '3xl': 'max-w-3xl',
+    '4xl': 'max-w-4xl',
+    full: 'max-w-6xl',
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/50 backdrop-blur-xs animate-in fade-in duration-200">
       <div
         className="fixed inset-0"
         onClick={onClose}
@@ -55,24 +59,29 @@ export const Modal: React.FC<ModalProps> = ({
       <div
         className={twMerge(
           clsx(
-            'relative w-full bg-white rounded-2xl shadow-xl border border-surface-border overflow-hidden z-10 animate-in zoom-in-95 duration-200',
+            'relative w-full bg-white rounded-2xl shadow-2xl border border-surface-border z-10 animate-in zoom-in-95 duration-200 flex flex-col max-h-[92vh] overflow-hidden my-auto',
             maxStyles[maxWidth],
           ),
         )}
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-surface-border bg-surface">
+        {/* Sticky Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-surface-border bg-surface shrink-0">
           <div>
             {title && <h3 className="text-base font-semibold text-text-primary">{title}</h3>}
             {description && <p className="text-xs text-text-secondary mt-0.5">{description}</p>}
           </div>
           <button
             onClick={onClose}
-            className="text-text-muted hover:text-text-primary rounded-lg p-1.5 transition-colors"
+            className="text-text-muted hover:text-text-primary rounded-lg p-1.5 transition-colors hover:bg-gray-100"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
-        <div className="p-6">{children}</div>
+
+        {/* Scrollable Content Body */}
+        <div className="p-6 overflow-y-auto flex-1 overscroll-contain">
+          {children}
+        </div>
       </div>
     </div>
   );

@@ -265,7 +265,7 @@ export default function CreateInvoiceModal({
       isOpen={isOpen}
       onClose={onClose}
       title="Generate Patient Invoice"
-      maxWidth="xl"
+      maxWidth="2xl"
     >
       <div className="space-y-5">
         {/* Patient Selection Header */}
