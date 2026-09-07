@@ -39,7 +39,7 @@ export const Navbar: React.FC<NavbarProps> = ({ isSidebarOpen = false, onToggleS
             type="button"
             onClick={onToggleSidebar}
             aria-label={isSidebarOpen ? 'Close navigation menu' : 'Open navigation menu'}
-            className="lg:hidden p-2 rounded-xl text-text-secondary hover:text-text-primary hover:bg-surface transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="lg:hidden min-w-[44px] min-h-[44px] flex items-center justify-center p-2.5 rounded-xl text-text-secondary hover:text-text-primary hover:bg-surface transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20"
           >
             {isSidebarOpen ? <X className="w-5 h-5 text-primary" /> : <Menu className="w-5 h-5" />}
           </button>
@@ -81,7 +81,7 @@ export const Navbar: React.FC<NavbarProps> = ({ isSidebarOpen = false, onToggleS
               size="sm"
               onClick={logout}
               leftIcon={<LogOut className="w-4 h-4 text-text-secondary hover:text-status-danger" />}
-              className="text-xs text-text-secondary hover:text-status-danger hover:bg-red-50 px-2 sm:px-3"
+              className="text-xs text-text-secondary hover:text-status-danger hover:bg-red-50 min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0 px-2.5 sm:px-3 flex items-center justify-center"
             >
               <span className="hidden sm:inline">Logout</span>
             </Button>

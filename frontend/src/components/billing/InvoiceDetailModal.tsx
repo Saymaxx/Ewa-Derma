@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '@/lib/api';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
@@ -62,14 +62,7 @@ export default function InvoiceDetailModal({
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [isSendingWA, setIsSendingWA] = useState(false);
 
-  useEffect(() => {
-    if (isOpen && invoiceId) {
-      loadInvoiceDetails();
-      loadNotifHistory();
-    }
-  }, [isOpen, invoiceId]);
-
-  const loadNotifHistory = async () => {
+  const loadNotifHistory = useCallback(async () => {
     if (!invoiceId) return;
     try {
       const res = await api.get(`/notifications/history/INVOICE/${invoiceId}`);
@@ -77,7 +70,29 @@ export default function InvoiceDetailModal({
     } catch {
       // Ignore
     }
-  };
+  }, [invoiceId]);
+
+  const loadInvoiceDetails = useCallback(async () => {
+    if (!invoiceId) return;
+    setIsLoading(true);
+    try {
+      const res = await api.get(`/invoices/${invoiceId}`);
+      const inv = res.data.data;
+      setInvoice(inv);
+      setPayAmount(Number(inv.dueAmount));
+    } catch (err: any) {
+      showToast('Failed to load invoice details', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [invoiceId, showToast]);
+
+  useEffect(() => {
+    if (isOpen && invoiceId) {
+      loadInvoiceDetails();
+      loadNotifHistory();
+    }
+  }, [isOpen, invoiceId, loadInvoiceDetails, loadNotifHistory]);
 
   const handleSendEmail = async () => {
     if (!invoiceId) return;
@@ -99,30 +114,15 @@ export default function InvoiceDetailModal({
     try {
       const res = await api.post(`/notifications/send-invoice/${invoiceId}`, { channel: 'WHATSAPP' });
       if (res.data.data?.status === 'FAILED') {
-        showToast(res.data.data.errorLog || 'WhatsApp is not connected yet', 'error');
+        showToast(res.data.data.errorLog || 'WhatsApp service not configured', 'error');
       } else {
         showToast(res.data.message || 'Invoice sent via WhatsApp', 'success');
       }
       loadNotifHistory();
     } catch (err: any) {
-      showToast(err.response?.data?.error?.message || err.response?.data?.message || 'WhatsApp is not connected yet', 'error');
+      showToast(err.response?.data?.error?.message || err.response?.data?.message || 'WhatsApp notification failed', 'error');
     } finally {
       setIsSendingWA(false);
-    }
-  };
-
-  const loadInvoiceDetails = async () => {
-    if (!invoiceId) return;
-    setIsLoading(true);
-    try {
-      const res = await api.get(`/invoices/${invoiceId}`);
-      const inv = res.data.data;
-      setInvoice(inv);
-      setPayAmount(Number(inv.dueAmount));
-    } catch (err: any) {
-      showToast('Failed to load invoice details', 'error');
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -139,6 +139,7 @@ export default function InvoiceDetailModal({
       document.body.appendChild(link);
       link.click();
       link.remove();
+      window.URL.revokeObjectURL(url);
       showToast('Invoice PDF downloaded', 'success');
     } catch (err) {
       showToast('Failed to download invoice PDF', 'error');

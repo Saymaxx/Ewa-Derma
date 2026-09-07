@@ -7,6 +7,7 @@ import { api } from '@/lib/api';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { StatGridSkeleton } from '@/components/ui/Skeleton';
 import {
   Building2,
   Phone,
@@ -273,71 +274,75 @@ export default function DashboardPage() {
       )}
 
       {/* 2. OPERATIONAL SUMMARY METRICS */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <Card className="hover:border-primary/40 transition-colors">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary-50 text-primary border border-primary-100 flex items-center justify-center shrink-0">
-              <Calendar className="w-5 h-5" />
-            </div>
-            <div>
-              <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">
-                Today Scheduled
-              </span>
-              <span className="text-2xl font-bold text-text-primary">
-                {isLoading ? '...' : stats.todayAppointments}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
+      {isLoading ? (
+        <StatGridSkeleton count={4} />
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className="hover:border-primary/40 transition-colors">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary-50 text-primary border border-primary-100 flex items-center justify-center shrink-0">
+                <Calendar className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">
+                  Today Scheduled
+                </span>
+                <span className="text-2xl font-bold text-text-primary">
+                  {stats.todayAppointments}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
 
-        <Card className="hover:border-accent/40 transition-colors">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-50 text-accent border border-amber-200 flex items-center justify-center shrink-0">
-              <UserCheck className="w-5 h-5" />
-            </div>
-            <div>
-              <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">
-                In Clinic / Queue
-              </span>
-              <span className="text-2xl font-bold text-accent">
-                {isLoading ? '...' : stats.checkedInCount}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
+          <Card className="hover:border-accent/40 transition-colors">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-50 text-accent border border-amber-200 flex items-center justify-center shrink-0">
+                <UserCheck className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">
+                  In Clinic / Queue
+                </span>
+                <span className="text-2xl font-bold text-accent">
+                  {stats.checkedInCount}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
 
-        <Card className="hover:border-primary/40 transition-colors">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 text-primary border border-blue-100 flex items-center justify-center shrink-0">
-              <Users className="w-5 h-5" />
-            </div>
-            <div>
-              <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">
-                Total Patients
-              </span>
-              <span className="text-2xl font-bold text-text-primary">
-                {isLoading ? '...' : stats.totalPatients}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
+          <Card className="hover:border-primary/40 transition-colors">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-50 text-primary border border-blue-100 flex items-center justify-center shrink-0">
+                <Users className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">
+                  Total Patients
+                </span>
+                <span className="text-2xl font-bold text-text-primary">
+                  {stats.totalPatients}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
 
-        <Card className="hover:border-primary/40 transition-colors">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-green-50 text-status-success border border-green-200 flex items-center justify-center shrink-0">
-              <Stethoscope className="w-5 h-5" />
-            </div>
-            <div>
-              <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">
-                Active Doctors
-              </span>
-              <span className="text-2xl font-bold text-text-primary">
-                {isLoading ? '...' : stats.activeDoctors}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+          <Card className="hover:border-primary/40 transition-colors">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-green-50 text-status-success border border-green-200 flex items-center justify-center shrink-0">
+                <Stethoscope className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">
+                  Active Doctors
+                </span>
+                <span className="text-2xl font-bold text-text-primary">
+                  {stats.activeDoctors}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* 3. TWO ANALYTICS CHARTS (ADMIN ONLY VISUALIZATIONS) */}
       {isAdmin && (

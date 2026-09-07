@@ -11,6 +11,8 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Input';
 import { STATUS_MAPPINGS } from '@/styles/theme';
+import { useWaitingQueuePolling } from '@/lib/useWaitingQueuePolling';
+import { StatGridSkeleton, CardSkeleton } from '@/components/ui/Skeleton';
 import {
   Stethoscope,
   Clock,
@@ -47,8 +49,8 @@ export default function DoctorDashboardPage() {
   );
 
   // 1. Fetch Doctor's Queue, All Appointments for this Doctor, and Doctor Roster
-  const fetchDoctorData = useCallback(async () => {
-    setIsLoading(true);
+  const fetchDoctorData = useCallback(async (isSilent = false) => {
+    if (!isSilent) setIsLoading(true);
     try {
       const docId = user?.doctorId || undefined;
       const [queueRes, aptsRes, docsRes] = await Promise.all([
@@ -68,14 +70,20 @@ export default function DoctorDashboardPage() {
       setDoctorAppointments(aptsRes.data.data || []);
       setDoctorRoster(docsRes.data.data || []);
     } catch {
-      showToast('Failed to load clinical workspace data', 'error');
+      if (!isSilent) showToast('Failed to load clinical workspace data', 'error');
     } finally {
       setIsLoading(false);
     }
   }, [user?.doctorId, selectedDateFilter, showToast]);
 
+  const { timeAgoText, triggerImmediateRefresh } = useWaitingQueuePolling({
+    fetchFn: () => fetchDoctorData(true),
+    intervalMs: 12000,
+    enabled: true,
+  });
+
   useEffect(() => {
-    fetchDoctorData();
+    fetchDoctorData(false);
   }, [fetchDoctorData]);
 
   const handleStartConsultation = async (appointmentId: string) => {
@@ -151,71 +159,75 @@ export default function DoctorDashboardPage() {
       </div>
 
       {/* 2. DOCTOR METRICS CARDS */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <Card className="hover:border-accent/40 transition-colors">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-50 text-accent border border-amber-200 flex items-center justify-center shrink-0">
-              <Activity className="w-5 h-5 animate-pulse" />
-            </div>
-            <div>
-              <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">
-                Waiting In Queue
-              </span>
-              <span className="text-2xl font-bold text-accent">
-                {isLoading ? '...' : queue.length}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
+      {isLoading ? (
+        <StatGridSkeleton count={4} />
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className="hover:border-accent/40 transition-colors">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-50 text-accent border border-amber-200 flex items-center justify-center shrink-0">
+                <Activity className="w-5 h-5 animate-pulse" />
+              </div>
+              <div>
+                <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">
+                  Waiting In Queue
+                </span>
+                <span className="text-2xl font-bold text-accent">
+                  {queue.length}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
 
-        <Card className="hover:border-primary/40 transition-colors">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-green-50 text-status-success border border-green-200 flex items-center justify-center shrink-0">
-              <CheckCircle2 className="w-5 h-5" />
-            </div>
-            <div>
-              <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">
-                Completed (Selected Date)
-              </span>
-              <span className="text-2xl font-bold text-text-primary">
-                {isLoading ? '...' : completedToday.length}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
+          <Card className="hover:border-primary/40 transition-colors">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-green-50 text-status-success border border-green-200 flex items-center justify-center shrink-0">
+                <CheckCircle2 className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">
+                  Completed (Selected Date)
+                </span>
+                <span className="text-2xl font-bold text-text-primary">
+                  {completedToday.length}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
 
-        <Card className="hover:border-primary/40 transition-colors">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 text-primary border border-blue-100 flex items-center justify-center shrink-0">
-              <Calendar className="w-5 h-5" />
-            </div>
-            <div>
-              <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">
-                Total Scheduled
-              </span>
-              <span className="text-2xl font-bold text-text-primary">
-                {isLoading ? '...' : doctorAppointments.length}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
+          <Card className="hover:border-primary/40 transition-colors">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-50 text-primary border border-blue-100 flex items-center justify-center shrink-0">
+                <Calendar className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">
+                  Total Scheduled
+                </span>
+                <span className="text-2xl font-bold text-text-primary">
+                  {doctorAppointments.length}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
 
-        <Card className="hover:border-primary/40 transition-colors">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 border border-purple-100 flex items-center justify-center shrink-0">
-              <UserCog className="w-5 h-5" />
-            </div>
-            <div>
-              <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">
-                Clinic Doctors
-              </span>
-              <span className="text-2xl font-bold text-text-primary">
-                {isLoading ? '...' : doctorRoster.length}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+          <Card className="hover:border-primary/40 transition-colors">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 border border-purple-100 flex items-center justify-center shrink-0">
+                <UserCog className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">
+                  Clinic Doctors
+                </span>
+                <span className="text-2xl font-bold text-text-primary">
+                  {doctorRoster.length}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* 3. NAVIGATION TABS: QUEUE | MY APPOINTMENTS & PATIENTS | DOCTOR ROSTER */}
       <div className="flex items-center justify-between border-b border-surface-border pb-3 gap-4">
@@ -285,9 +297,8 @@ export default function DoctorDashboardPage() {
 
           <CardContent className="p-0">
             {isLoading ? (
-              <div className="p-12 flex flex-col items-center justify-center gap-2 text-text-secondary">
-                <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                <p className="text-xs">Loading patient queue...</p>
+              <div className="p-6 space-y-4">
+                <CardSkeleton rows={3} />
               </div>
             ) : queue.length === 0 ? (
               <div className="p-12 text-center text-text-secondary text-xs space-y-2">

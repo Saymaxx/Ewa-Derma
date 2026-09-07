@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
+import { TableSkeleton } from '@/components/ui/Skeleton';
 import { ShoppingCart, Plus, Calendar, Package, Sliders } from 'lucide-react';
 
 export default function PurchasesPage() {
@@ -147,8 +148,8 @@ export default function PurchasesPage() {
       <Card>
         <CardContent className="p-0 overflow-x-auto">
           {isLoading ? (
-            <div className="p-8 text-center text-xs text-text-secondary animate-pulse">
-              Loading stock purchase history...
+            <div className="p-4">
+              <TableSkeleton rows={6} columns={8} />
             </div>
           ) : purchaseList.length === 0 ? (
             <div className="p-8 text-center text-xs text-text-secondary">
@@ -203,7 +204,7 @@ export default function PurchasesPage() {
         maxWidth="lg"
       >
         <form onSubmit={handleRecordPurchase} className="space-y-4 text-xs text-text-main">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="font-semibold text-text-secondary block mb-1">
                 Medicine <span className="text-red-500">*</span>

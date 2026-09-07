@@ -4,6 +4,20 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { useRouter, usePathname } from 'next/navigation';
 import { api } from './api';
 
+export interface ClinicInfo {
+  clinicName: string;
+  address: string;
+  contactNumber: string;
+  email?: string;
+  gstNumber?: string;
+  taxRate?: number;
+  openingTime: string;
+  closingTime: string;
+  operatingDays: string;
+  slotDuration?: number;
+  logoUrl?: string;
+}
+
 export interface UserProfile {
   id: string;
   email: string;
@@ -13,14 +27,7 @@ export interface UserProfile {
   phoneNumber?: string;
   roles: ('ADMIN' | 'DOCTOR' | 'RECEPTIONIST' | 'INVENTORY_MANAGER')[];
   doctorId?: string | null;
-  clinic?: {
-    clinicName: string;
-    address: string;
-    contactNumber: string;
-    openingTime: string;
-    closingTime: string;
-    operatingDays: string;
-  } | null;
+  clinic?: ClinicInfo | null;
 }
 
 interface AuthContextType {
@@ -30,6 +37,8 @@ interface AuthContextType {
   login: (identifier: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   hasRole: (roles: string | string[]) => boolean;
+  refreshProfile: () => Promise<void>;
+  updateClinic: (clinic: Partial<ClinicInfo>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -130,6 +139,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return required.some((role) => user.roles.includes(role as any));
   };
 
+  const refreshProfile = async () => {
+    await fetchCurrentUser();
+  };
+
+  const updateClinic = (updatedClinic: Partial<ClinicInfo>) => {
+    setUser((prev) => {
+      if (!prev) return null;
+      const newClinic = prev.clinic ? { ...prev.clinic, ...updatedClinic } : (updatedClinic as ClinicInfo);
+      const newUser = { ...prev, clinic: newClinic };
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('ewa_user', JSON.stringify(newUser));
+      }
+      return newUser;
+    });
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -139,6 +164,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         logout,
         hasRole,
+        refreshProfile,
+        updateClinic,
       }}
     >
       {children}

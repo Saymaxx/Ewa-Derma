@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/Input';
 import { useToast } from '@/components/ui/Toast';
 import CreateInvoiceModal from '@/components/billing/CreateInvoiceModal';
 import InvoiceDetailModal from '@/components/billing/InvoiceDetailModal';
+import { TableSkeleton } from '@/components/ui/Skeleton';
 import {
   CreditCard,
   Plus,
@@ -20,6 +21,8 @@ import {
   CheckCircle2,
   AlertCircle,
   Filter,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 
 export default function InvoicesPage() {
@@ -28,6 +31,12 @@ export default function InvoicesPage() {
   const [invoices, setInvoices] = useState<any[]>([]);
   const [patientsList, setPatientsList] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Pagination
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(20);
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
 
   // Filters
   const [selectedPatientId, setSelectedPatientId] = useState('');
@@ -49,17 +58,33 @@ export default function InvoicesPage() {
           status: selectedStatus || undefined,
           startDate: startDate || undefined,
           endDate: endDate || undefined,
+          page,
+          limit,
         },
       });
-      const rawInvoices = res?.data?.data ?? res?.data;
-      setInvoices(Array.isArray(rawInvoices) ? rawInvoices : []);
+      const data = res?.data?.data ?? res?.data;
+      if (data && Array.isArray(data.items)) {
+        setInvoices(data.items);
+        setTotalCount(data.total || 0);
+        setTotalPages(data.totalPages || 1);
+      } else if (Array.isArray(data)) {
+        setInvoices(data);
+        setTotalCount(data.length);
+        setTotalPages(1);
+      } else {
+        setInvoices([]);
+        setTotalCount(0);
+        setTotalPages(1);
+      }
     } catch (err: any) {
       showToast('Failed to load invoices list', 'error');
       setInvoices([]);
+      setTotalCount(0);
+      setTotalPages(1);
     } finally {
       setIsLoading(false);
     }
-  }, [selectedPatientId, selectedStatus, startDate, endDate, showToast]);
+  }, [selectedPatientId, selectedStatus, startDate, endDate, page, limit, showToast]);
 
   useEffect(() => {
     api.get('/patients').then((res) => {
@@ -170,7 +195,10 @@ export default function InvoicesPage() {
                   </label>
                   <select
                     value={selectedPatientId}
-                    onChange={(e) => setSelectedPatientId(e.target.value)}
+                    onChange={(e) => {
+                      setSelectedPatientId(e.target.value);
+                      setPage(1);
+                    }}
                     className="w-full h-9 rounded-xl border border-surface-border bg-white px-3 text-xs focus:border-primary focus:outline-none"
                   >
                     <option value="">All Patients</option>
@@ -189,7 +217,10 @@ export default function InvoicesPage() {
                   </label>
                   <select
                     value={selectedStatus}
-                    onChange={(e) => setSelectedStatus(e.target.value)}
+                    onChange={(e) => {
+                      setSelectedStatus(e.target.value);
+                      setPage(1);
+                    }}
                     className="w-full h-9 rounded-xl border border-surface-border bg-white px-3 text-xs focus:border-primary focus:outline-none"
                   >
                     <option value="">All Statuses</option>
@@ -209,7 +240,10 @@ export default function InvoicesPage() {
                   <Input
                     type="date"
                     value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
+                    onChange={(e) => {
+                      setStartDate(e.target.value);
+                      setPage(1);
+                    }}
                     className="py-1 text-xs"
                   />
                 </div>
@@ -221,7 +255,10 @@ export default function InvoicesPage() {
                   <Input
                     type="date"
                     value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
+                    onChange={(e) => {
+                      setEndDate(e.target.value);
+                      setPage(1);
+                    }}
                     className="py-1 text-xs"
                   />
                 </div>
@@ -233,8 +270,9 @@ export default function InvoicesPage() {
                 onClick={() => {
                   setSelectedPatientId('');
                   setSelectedStatus('');
-                  setStartDate('2026-01-01');
-                  setEndDate('2026-12-31');
+                  setStartDate('');
+                  setEndDate('');
+                  setPage(1);
                 }}
               >
                 Reset Filters
@@ -246,8 +284,8 @@ export default function InvoicesPage() {
           <Card>
             <CardContent className="p-0 overflow-x-auto">
               {isLoading ? (
-                <div className="p-8 text-center text-xs text-text-secondary animate-pulse">
-                  Loading clinical billing records...
+                <div className="p-4">
+                  <TableSkeleton rows={6} columns={8} />
                 </div>
               ) : invoiceList.length === 0 ? (
                 <div className="p-8 text-center text-xs text-text-secondary">
@@ -296,7 +334,7 @@ export default function InvoicesPage() {
                                 setSelectedInvoiceId(inv.id);
                                 setIsDetailOpen(true);
                               }}
-                              className="px-2.5 py-1 text-xs rounded-lg border border-primary/30 text-primary hover:bg-primary-50 font-semibold"
+                              className="min-h-[36px] px-3 py-1.5 text-xs rounded-lg border border-primary/30 text-primary hover:bg-primary-50 active:bg-primary-100 font-semibold transition-colors"
                             >
                               Inspect / Collect
                             </button>
@@ -308,6 +346,42 @@ export default function InvoicesPage() {
                 </table>
               )}
             </CardContent>
+
+            {/* Pagination Footer */}
+            {!isLoading && invoiceList.length > 0 && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-surface-border bg-surface/30 text-xs text-text-secondary">
+                <div>
+                  Showing <span className="font-semibold">{invoiceList.length}</span> of{' '}
+                  <span className="font-semibold">{totalCount}</span> invoices
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page <= 1}
+                    className="min-w-[40px] min-h-[40px] p-2 flex items-center justify-center"
+                    aria-label="Previous page"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </Button>
+                  <span className="font-medium px-2">
+                    Page {page} of {totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={page >= totalPages}
+                    className="min-w-[40px] min-h-[40px] p-2 flex items-center justify-center"
+                    aria-label="Next page"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </Card>
 
           {/* Modals */}

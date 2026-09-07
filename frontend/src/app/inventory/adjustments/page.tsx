@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
+import { TableSkeleton } from '@/components/ui/Skeleton';
 import { Sliders, Plus, Calendar, Package, ShoppingCart } from 'lucide-react';
 
 export default function AdjustmentsPage() {
@@ -133,8 +134,8 @@ export default function AdjustmentsPage() {
       <Card>
         <CardContent className="p-0 overflow-x-auto">
           {isLoading ? (
-            <div className="p-8 text-center text-xs text-text-secondary animate-pulse">
-              Loading stock adjustments ledger...
+            <div className="p-4">
+              <TableSkeleton rows={6} columns={7} />
             </div>
           ) : adjList.length === 0 ? (
             <div className="p-8 text-center text-xs text-text-secondary">

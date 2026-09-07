@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { STATUS_MAPPINGS } from '@/styles/theme';
+import { StatGridSkeleton, TableSkeleton } from '@/components/ui/Skeleton';
 import {
   BarChart3,
   Calendar,
@@ -395,55 +396,59 @@ export default function ReportsPage() {
       {/* ============================================================= */}
       {activeTab === 'appointments' && (
         <div className="space-y-6">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <Card className="hover:border-primary/40 transition-colors">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-50 text-primary border border-blue-100 flex items-center justify-center shrink-0">
-                  <Calendar className="w-5 h-5" />
-                </div>
-                <div>
-                  <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">Total Booked</span>
-                  <span className="text-2xl font-bold text-text-primary">{isLoading ? '...' : appointmentReport?.summary?.total || 0}</span>
-                </div>
-              </CardContent>
-            </Card>
+          {isLoading ? (
+            <StatGridSkeleton count={4} />
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Card className="hover:border-primary/40 transition-colors">
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-50 text-primary border border-blue-100 flex items-center justify-center shrink-0">
+                    <Calendar className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">Total Booked</span>
+                    <span className="text-2xl font-bold text-text-primary">{appointmentReport?.summary?.total || 0}</span>
+                  </div>
+                </CardContent>
+              </Card>
 
-            <Card className="hover:border-green-400 transition-colors">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-green-50 text-status-success border border-green-200 flex items-center justify-center shrink-0">
-                  <CheckCircle2 className="w-5 h-5" />
-                </div>
-                <div>
-                  <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">Completed</span>
-                  <span className="text-2xl font-bold text-status-success">{isLoading ? '...' : appointmentReport?.summary?.completed || 0}</span>
-                </div>
-              </CardContent>
-            </Card>
+              <Card className="hover:border-green-400 transition-colors">
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-green-50 text-status-success border border-green-200 flex items-center justify-center shrink-0">
+                    <CheckCircle2 className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">Completed</span>
+                    <span className="text-2xl font-bold text-status-success">{appointmentReport?.summary?.completed || 0}</span>
+                  </div>
+                </CardContent>
+              </Card>
 
-            <Card className="hover:border-amber-400 transition-colors border-l-4 border-l-accent">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-50 text-accent border border-amber-200 flex items-center justify-center shrink-0">
-                  <ArrowUpRight className="w-5 h-5" />
-                </div>
-                <div>
-                  <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">Completion Rate</span>
-                  <span className="text-2xl font-bold text-accent">{isLoading ? '...' : `${appointmentReport?.summary?.completionRate || 0}%`}</span>
-                </div>
-              </CardContent>
-            </Card>
+              <Card className="hover:border-amber-400 transition-colors border-l-4 border-l-accent">
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-50 text-accent border border-amber-200 flex items-center justify-center shrink-0">
+                    <ArrowUpRight className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">Completion Rate</span>
+                    <span className="text-2xl font-bold text-accent">{`${appointmentReport?.summary?.completionRate || 0}%`}</span>
+                  </div>
+                </CardContent>
+              </Card>
 
-            <Card className="hover:border-red-400 transition-colors">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-rose-50 text-status-error border border-rose-200 flex items-center justify-center shrink-0">
-                  <AlertTriangle className="w-5 h-5" />
-                </div>
-                <div>
-                  <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">Cancelled / No Show</span>
-                  <span className="text-2xl font-bold text-text-primary">{isLoading ? '...' : (appointmentReport?.summary?.cancelled || 0) + (appointmentReport?.summary?.noShow || 0)}</span>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+              <Card className="hover:border-red-400 transition-colors">
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-rose-50 text-status-error border border-rose-200 flex items-center justify-center shrink-0">
+                    <AlertTriangle className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">Cancelled / No Show</span>
+                    <span className="text-2xl font-bold text-text-primary">{(appointmentReport?.summary?.cancelled || 0) + (appointmentReport?.summary?.noShow || 0)}</span>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card accentTop>
@@ -512,55 +517,59 @@ export default function ReportsPage() {
       {/* ============================================================= */}
       {activeTab === 'patients' && (
         <div className="space-y-6">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <Card className="hover:border-primary/40 transition-colors">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-50 text-primary border border-blue-100 flex items-center justify-center shrink-0">
-                  <UserPlus className="w-5 h-5" />
-                </div>
-                <div>
-                  <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">New Registrations</span>
-                  <span className="text-2xl font-bold text-text-primary">{isLoading ? '...' : patientReport?.summary?.totalNewPatients || 0}</span>
-                </div>
-              </CardContent>
-            </Card>
+          {isLoading ? (
+            <StatGridSkeleton count={4} />
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Card className="hover:border-primary/40 transition-colors">
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-50 text-primary border border-blue-100 flex items-center justify-center shrink-0">
+                    <UserPlus className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">New Registrations</span>
+                    <span className="text-2xl font-bold text-text-primary">{patientReport?.summary?.totalNewPatients || 0}</span>
+                  </div>
+                </CardContent>
+              </Card>
 
-            <Card className="hover:border-primary/40 transition-colors">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-green-50 text-status-success border border-green-200 flex items-center justify-center shrink-0">
-                  <RefreshCw className="w-5 h-5" />
-                </div>
-                <div>
-                  <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">Returning Patients</span>
-                  <span className="text-2xl font-bold text-status-success">{isLoading ? '...' : patientReport?.summary?.totalReturningPatients || 0}</span>
-                </div>
-              </CardContent>
-            </Card>
+              <Card className="hover:border-primary/40 transition-colors">
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-green-50 text-status-success border border-green-200 flex items-center justify-center shrink-0">
+                    <RefreshCw className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">Returning Patients</span>
+                    <span className="text-2xl font-bold text-status-success">{patientReport?.summary?.totalReturningPatients || 0}</span>
+                  </div>
+                </CardContent>
+              </Card>
 
-            <Card className="hover:border-amber-400 transition-colors border-l-4 border-l-accent">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-50 text-accent border border-amber-200 flex items-center justify-center shrink-0">
-                  <Clock className="w-5 h-5" />
-                </div>
-                <div>
-                  <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">Pending Follow-Ups</span>
-                  <span className="text-2xl font-bold text-accent">{isLoading ? '...' : patientReport?.summary?.pendingFollowUps || 0}</span>
-                </div>
-              </CardContent>
-            </Card>
+              <Card className="hover:border-amber-400 transition-colors border-l-4 border-l-accent">
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-50 text-accent border border-amber-200 flex items-center justify-center shrink-0">
+                    <Clock className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">Pending Follow-Ups</span>
+                    <span className="text-2xl font-bold text-accent">{patientReport?.summary?.pendingFollowUps || 0}</span>
+                  </div>
+                </CardContent>
+              </Card>
 
-            <Card className="hover:border-red-400 transition-colors">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-rose-50 text-status-error border border-rose-200 flex items-center justify-center shrink-0">
-                  <AlertTriangle className="w-5 h-5" />
-                </div>
-                <div>
-                  <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">Overdue Follow-Ups</span>
-                  <span className="text-2xl font-bold text-status-error">{isLoading ? '...' : patientReport?.summary?.overdueFollowUps || 0}</span>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+              <Card className="hover:border-red-400 transition-colors">
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-rose-50 text-status-error border border-rose-200 flex items-center justify-center shrink-0">
+                    <AlertTriangle className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">Overdue Follow-Ups</span>
+                    <span className="text-2xl font-bold text-status-error">{patientReport?.summary?.overdueFollowUps || 0}</span>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </div>
       )}
 
@@ -570,75 +579,79 @@ export default function ReportsPage() {
       {activeTab === 'revenue' && (
         <div className="space-y-6">
           {/* Revenue Summary Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-            <Card className="border-l-4 border-l-accent hover:border-amber-400 transition-colors">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-50 text-accent border border-amber-200 flex items-center justify-center shrink-0">
-                  <IndianRupee className="w-5 h-5" />
-                </div>
-                <div>
-                  <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">
-                    Collected Revenue (Net)
-                  </span>
-                  <span className="text-2xl font-bold text-emerald-700">
-                    {isLoading ? '...' : `₹${revenueReport?.summary?.collectedRevenue?.toLocaleString() || 0}`}
-                  </span>
-                  <span className="text-[10px] text-text-muted block">Actual cash/UPI received</span>
-                </div>
-              </CardContent>
-            </Card>
+          {isLoading ? (
+            <StatGridSkeleton count={4} />
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Card className="border-l-4 border-l-accent hover:border-amber-400 transition-colors">
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-50 text-accent border border-amber-200 flex items-center justify-center shrink-0">
+                    <IndianRupee className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">
+                      Collected Revenue (Net)
+                    </span>
+                    <span className="text-2xl font-bold text-emerald-700">
+                      {`₹${revenueReport?.summary?.collectedRevenue?.toLocaleString() || 0}`}
+                    </span>
+                    <span className="text-[10px] text-text-muted block">Actual cash/UPI received</span>
+                  </div>
+                </CardContent>
+              </Card>
 
-            <Card className="hover:border-primary/40 transition-colors">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-purple-50 text-primary border border-purple-100 flex items-center justify-center shrink-0">
-                  <FileText className="w-5 h-5" />
-                </div>
-                <div>
-                  <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">
-                    Billed Revenue (Invoiced)
-                  </span>
-                  <span className="text-2xl font-bold text-primary">
-                    {isLoading ? '...' : `₹${revenueReport?.summary?.billedRevenue?.toLocaleString() || 0}`}
-                  </span>
-                  <span className="text-[10px] text-text-muted block">Total invoiced value</span>
-                </div>
-              </CardContent>
-            </Card>
+              <Card className="hover:border-primary/40 transition-colors">
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-purple-50 text-primary border border-purple-100 flex items-center justify-center shrink-0">
+                    <FileText className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">
+                      Billed Revenue (Invoiced)
+                    </span>
+                    <span className="text-2xl font-bold text-primary">
+                      {`₹${revenueReport?.summary?.billedRevenue?.toLocaleString() || 0}`}
+                    </span>
+                    <span className="text-[10px] text-text-muted block">Total invoiced value</span>
+                  </div>
+                </CardContent>
+              </Card>
 
-            <Card className="hover:border-red-300 transition-colors">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-rose-50 text-red-600 border border-rose-200 flex items-center justify-center shrink-0">
-                  <Clock className="w-5 h-5" />
-                </div>
-                <div>
-                  <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">
-                    Outstanding Due
-                  </span>
-                  <span className="text-2xl font-bold text-red-600">
-                    {isLoading ? '...' : `₹${revenueReport?.summary?.totalOutstandingDue?.toLocaleString() || 0}`}
-                  </span>
-                  <span className="text-[10px] text-text-muted block">Unpaid invoice balance</span>
-                </div>
-              </CardContent>
-            </Card>
+              <Card className="hover:border-red-300 transition-colors">
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-rose-50 text-red-600 border border-rose-200 flex items-center justify-center shrink-0">
+                    <Clock className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">
+                      Outstanding Due
+                    </span>
+                    <span className="text-2xl font-bold text-red-600">
+                      {`₹${revenueReport?.summary?.totalOutstandingDue?.toLocaleString() || 0}`}
+                    </span>
+                    <span className="text-[10px] text-text-muted block">Unpaid invoice balance</span>
+                  </div>
+                </CardContent>
+              </Card>
 
-            <Card className="hover:border-amber-300 transition-colors">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-800 border border-amber-200 flex items-center justify-center shrink-0">
-                  <ArrowDownRight className="w-5 h-5" />
-                </div>
-                <div>
-                  <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">
-                    Refunds Issued
-                  </span>
-                  <span className="text-2xl font-bold text-amber-800">
-                    {isLoading ? '...' : `₹${revenueReport?.summary?.totalRefundsIssued?.toLocaleString() || 0}`}
-                  </span>
-                  <span className="text-[10px] text-text-muted block">Deducted from collected</span>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+              <Card className="hover:border-amber-300 transition-colors">
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-800 border border-amber-200 flex items-center justify-center shrink-0">
+                    <ArrowDownRight className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">
+                      Refunds Issued
+                    </span>
+                    <span className="text-2xl font-bold text-amber-800">
+                      {`₹${revenueReport?.summary?.totalRefundsIssued?.toLocaleString() || 0}`}
+                    </span>
+                    <span className="text-[10px] text-text-muted block">Deducted from collected</span>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
           {/* Breakdown Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -736,8 +749,8 @@ export default function ReportsPage() {
             </CardHeader>
             <CardContent className="p-0 overflow-x-auto">
               {isLoading ? (
-                <div className="p-12 flex justify-center text-xs text-text-muted">
-                  <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                <div className="p-4">
+                  <TableSkeleton rows={6} columns={8} />
                 </div>
               ) : revenueReport?.items?.length === 0 ? (
                 <div className="p-8 text-center text-xs text-text-muted">No invoice records found in this range.</div>
@@ -786,75 +799,79 @@ export default function ReportsPage() {
       {activeTab === 'inventory' && (
         <div className="space-y-6">
           {/* Inventory Summary Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-            <Card className="border-l-4 border-l-accent hover:border-amber-400 transition-colors">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-50 text-accent border border-amber-200 flex items-center justify-center shrink-0">
-                  <Package className="w-5 h-5" />
-                </div>
-                <div>
-                  <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">
-                    Total Inventory Value
-                  </span>
-                  <span className="text-2xl font-bold text-primary">
-                    {isLoading ? '...' : `₹${inventoryReport?.summary?.totalInventoryValue?.toLocaleString() || 0}`}
-                  </span>
-                  <span className="text-[10px] text-text-muted block">Reused Phase 5 cost valuation</span>
-                </div>
-              </CardContent>
-            </Card>
+          {isLoading ? (
+            <StatGridSkeleton count={4} />
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Card className="border-l-4 border-l-accent hover:border-amber-400 transition-colors">
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-50 text-accent border border-amber-200 flex items-center justify-center shrink-0">
+                    <Package className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">
+                      Total Inventory Value
+                    </span>
+                    <span className="text-2xl font-bold text-primary">
+                      {`₹${inventoryReport?.summary?.totalInventoryValue?.toLocaleString() || 0}`}
+                    </span>
+                    <span className="text-[10px] text-text-muted block">Reused Phase 5 cost valuation</span>
+                  </div>
+                </CardContent>
+              </Card>
 
-            <Card className="hover:border-primary/40 transition-colors">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-50 text-primary border border-blue-100 flex items-center justify-center shrink-0">
-                  <BarChart3 className="w-5 h-5" />
-                </div>
-                <div>
-                  <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">
-                    Medicines Count
-                  </span>
-                  <span className="text-2xl font-bold text-text-primary">
-                    {isLoading ? '...' : inventoryReport?.summary?.totalMedicinesCount || 0}
-                  </span>
-                  <span className="text-[10px] text-text-muted block">Active formulary items</span>
-                </div>
-              </CardContent>
-            </Card>
+              <Card className="hover:border-primary/40 transition-colors">
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-50 text-primary border border-blue-100 flex items-center justify-center shrink-0">
+                    <BarChart3 className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">
+                      Medicines Count
+                    </span>
+                    <span className="text-2xl font-bold text-text-primary">
+                      {inventoryReport?.summary?.totalMedicinesCount || 0}
+                    </span>
+                    <span className="text-[10px] text-text-muted block">Active formulary items</span>
+                  </div>
+                </CardContent>
+              </Card>
 
-            <Card className="hover:border-red-300 transition-colors">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-rose-50 text-red-600 border border-rose-200 flex items-center justify-center shrink-0">
-                  <AlertTriangle className="w-5 h-5" />
-                </div>
-                <div>
-                  <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">
-                    Low Stock Items
-                  </span>
-                  <span className="text-2xl font-bold text-red-600">
-                    {isLoading ? '...' : inventoryReport?.summary?.lowStockCount || 0}
-                  </span>
-                  <span className="text-[10px] text-text-muted block">At or below minimum threshold</span>
-                </div>
-              </CardContent>
-            </Card>
+              <Card className="hover:border-red-300 transition-colors">
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-rose-50 text-red-600 border border-rose-200 flex items-center justify-center shrink-0">
+                    <AlertTriangle className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">
+                      Low Stock Items
+                    </span>
+                    <span className="text-2xl font-bold text-red-600">
+                      {inventoryReport?.summary?.lowStockCount || 0}
+                    </span>
+                    <span className="text-[10px] text-text-muted block">At or below minimum threshold</span>
+                  </div>
+                </CardContent>
+              </Card>
 
-            <Card className="hover:border-emerald-300 transition-colors">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center shrink-0">
-                  <CheckCircle2 className="w-5 h-5" />
-                </div>
-                <div>
-                  <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">
-                    Items Dispensed
-                  </span>
-                  <span className="text-2xl font-bold text-emerald-700">
-                    {isLoading ? '...' : inventoryReport?.summary?.totalItemsDispensed || 0}
-                  </span>
-                  <span className="text-[10px] text-text-muted block">Total units dispensed in range</span>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+              <Card className="hover:border-emerald-300 transition-colors">
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center shrink-0">
+                    <CheckCircle2 className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="text-xs text-text-secondary font-semibold uppercase tracking-wider block">
+                      Items Dispensed
+                    </span>
+                    <span className="text-2xl font-bold text-emerald-700">
+                      {inventoryReport?.summary?.totalItemsDispensed || 0}
+                    </span>
+                    <span className="text-[10px] text-text-muted block">Total units dispensed in range</span>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
           {/* Stock Movement Ledger Table */}
           <Card>
@@ -868,8 +885,8 @@ export default function ReportsPage() {
             </CardHeader>
             <CardContent className="p-0 overflow-x-auto">
               {isLoading ? (
-                <div className="p-12 flex justify-center text-xs text-text-muted">
-                  <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                <div className="p-4">
+                  <TableSkeleton rows={6} columns={7} />
                 </div>
               ) : inventoryReport?.movements?.length === 0 ? (
                 <div className="p-8 text-center text-xs text-text-muted">No stock movement transactions recorded in this range.</div>

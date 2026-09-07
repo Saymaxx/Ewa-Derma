@@ -19,6 +19,7 @@ import {
   TableCell,
 } from '@/components/ui/Table';
 import { Modal } from '@/components/ui/Modal';
+import { TableSkeleton } from '@/components/ui/Skeleton';
 import {
   Users,
   Search,
@@ -193,9 +194,8 @@ export default function PatientsPage() {
         </CardHeader>
         <CardContent className="p-0">
           {isLoading ? (
-            <div className="p-12 flex flex-col items-center justify-center gap-2 text-text-secondary">
-              <Loader2 className="w-6 h-6 animate-spin text-primary" />
-              <p className="text-xs">Fetching patient records...</p>
+            <div className="p-4">
+              <TableSkeleton rows={6} columns={6} />
             </div>
           ) : patients.length === 0 ? (
             <div className="p-12 text-center space-y-3">

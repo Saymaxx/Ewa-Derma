@@ -579,8 +579,8 @@ export default function NewConsultationPage() {
                       key={idx}
                       className="p-3.5 rounded-xl bg-surface border border-surface-border space-y-3"
                     >
-                      <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
-                        <div className="sm:col-span-4">
+                      <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+                        <div className="md:col-span-4">
                           <Input
                             placeholder="Medicine Name & Strength"
                             value={item.medicineName}
@@ -589,7 +589,7 @@ export default function NewConsultationPage() {
                           />
                         </div>
 
-                        <div className="sm:col-span-3">
+                        <div className="md:col-span-3">
                           <select
                             className="w-full rounded-lg border border-gray-300 py-2 px-2 text-xs bg-white text-text-primary focus:outline-none focus:border-primary"
                             value={item.frequency}
@@ -603,7 +603,7 @@ export default function NewConsultationPage() {
                           </select>
                         </div>
 
-                        <div className="sm:col-span-2">
+                        <div className="md:col-span-2">
                           <select
                             className="w-full rounded-lg border border-gray-300 py-2 px-2 text-xs bg-white text-text-primary focus:outline-none focus:border-primary"
                             value={item.duration}
@@ -617,7 +617,7 @@ export default function NewConsultationPage() {
                           </select>
                         </div>
 
-                        <div className="sm:col-span-2">
+                        <div className="md:col-span-2">
                           <select
                             className="w-full rounded-lg border border-gray-300 py-2 px-2 text-xs bg-white text-text-primary focus:outline-none focus:border-primary"
                             value={item.route}
@@ -630,11 +630,12 @@ export default function NewConsultationPage() {
                           </select>
                         </div>
 
-                        <div className="sm:col-span-1 flex justify-end">
+                        <div className="md:col-span-1 flex justify-end">
                           <button
                             type="button"
                             onClick={() => handleRemoveMedicineRow(idx)}
-                            className="p-1.5 text-text-muted hover:text-status-danger hover:bg-red-50 rounded transition-colors"
+                            aria-label={`Remove ${item.medicineName || 'medicine'}`}
+                            className="min-w-[40px] min-h-[40px] p-2 flex items-center justify-center text-text-muted hover:text-status-danger hover:bg-red-50 rounded-xl transition-colors"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>

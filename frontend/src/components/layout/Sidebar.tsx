@@ -125,13 +125,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
     },
     {
       label: 'Clinic Settings',
-      href: '#',
+      href: '/settings',
       icon: <Settings className="w-5 h-5" />,
       roles: ['ADMIN'],
     },
     {
       label: 'Audit Logs',
-      href: '#',
+      href: '/audit-logs',
       icon: <ShieldCheck className="w-5 h-5" />,
       roles: ['ADMIN'],
     },

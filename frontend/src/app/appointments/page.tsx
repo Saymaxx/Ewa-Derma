@@ -19,6 +19,7 @@ import {
   TableCell,
 } from '@/components/ui/Table';
 import { Modal } from '@/components/ui/Modal';
+import { TableSkeleton } from '@/components/ui/Skeleton';
 import { STATUS_MAPPINGS } from '@/styles/theme';
 import {
   Calendar,
@@ -40,6 +41,7 @@ import {
 } from 'lucide-react';
 
 import { getCachedData, setCachedData } from '@/lib/cache';
+import { useWaitingQueuePolling } from '@/lib/useWaitingQueuePolling';
 
 export default function AppointmentsPage() {
   const searchParams = useSearchParams();
@@ -104,8 +106,8 @@ export default function AppointmentsPage() {
   }, [bookForm.doctorId, showToast]);
 
   // 2. Fetch Appointments & Live Queue
-  const fetchAppointmentsAndQueue = useCallback(async () => {
-    setIsLoading(true);
+  const fetchAppointmentsAndQueue = useCallback(async (isSilent = false) => {
+    if (!isSilent) setIsLoading(true);
     try {
       const [aptRes, queueRes] = await Promise.all([
         api.get('/appointments', {
@@ -125,18 +127,25 @@ export default function AppointmentsPage() {
       setAppointments(aptRes.data.data || []);
       setQueue(queueRes.data.data || []);
     } catch (err: any) {
-      showToast('Failed to load appointments', 'error');
+      if (!isSilent) showToast('Failed to load appointments', 'error');
     } finally {
       setIsLoading(false);
     }
   }, [selectedDate, selectedDoctorId, selectedStatus, showToast]);
+
+  // Real-time background polling with visibility API
+  const { timeAgoText, triggerImmediateRefresh } = useWaitingQueuePolling({
+    fetchFn: () => fetchAppointmentsAndQueue(true),
+    intervalMs: 12000,
+    enabled: true,
+  });
 
   useEffect(() => {
     fetchDoctors();
   }, [fetchDoctors]);
 
   useEffect(() => {
-    fetchAppointmentsAndQueue();
+    fetchAppointmentsAndQueue(false);
   }, [fetchAppointmentsAndQueue]);
 
   // Handle preselected patient from URL
@@ -283,11 +292,20 @@ export default function AppointmentsPage() {
       {/* Top Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-surface-border shadow-xs">
         <div>
-          <div className="flex items-center gap-2">
-            <Calendar className="w-6 h-6 text-primary" />
-            <h1 className="text-2xl font-bold font-serif text-text-primary">
-              Appointments & Booking Schedule
-            </h1>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Calendar className="w-6 h-6 text-primary" />
+              <h1 className="text-2xl font-bold font-serif text-text-primary">
+                Appointments & Booking Schedule
+              </h1>
+            </div>
+            <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200/60 text-emerald-700 text-[11px] font-medium shadow-2xs">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              <span>Live Queue &bull; {timeAgoText}</span>
+            </div>
           </div>
           <p className="text-sm text-text-secondary mt-1">
             Manage patient appointments, doctor schedules, and front desk check-in.
@@ -331,7 +349,7 @@ export default function AppointmentsPage() {
         </CardHeader>
 
         {/* Filter Controls */}
-        <div className="p-4 border-b border-surface-border bg-surface/50 grid grid-cols-1 sm:grid-cols-4 gap-3">
+        <div className="p-4 border-b border-surface-border bg-surface/50 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <div>
             <label className="block text-[11px] font-bold text-text-secondary uppercase mb-1">
               Select Date
@@ -401,9 +419,8 @@ export default function AppointmentsPage() {
 
         <CardContent className="p-0">
           {isLoading ? (
-            <div className="p-12 flex flex-col items-center justify-center gap-2 text-text-secondary">
-              <Loader2 className="w-6 h-6 animate-spin text-primary" />
-              <p className="text-xs">Loading appointments...</p>
+            <div className="p-4">
+              <TableSkeleton rows={6} columns={7} />
             </div>
           ) : appointments.length === 0 ? (
             <div className="p-12 text-center text-text-secondary text-xs">

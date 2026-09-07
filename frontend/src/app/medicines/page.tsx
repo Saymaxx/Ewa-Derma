@@ -10,6 +10,8 @@ import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
+import { TableSkeleton } from '@/components/ui/Skeleton';
+import { getCachedData, setCachedData, clearCache, CACHE_KEYS, DEFAULT_TTLS } from '@/lib/cache';
 import {
   Package,
   PackagePlus,
@@ -41,7 +43,21 @@ export default function MedicinesPage() {
   const [editMinStock, setEditMinStock] = useState<number>(10);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const fetchMedicines = useCallback(async () => {
+  const fetchMedicines = useCallback(async (forceRefresh = false) => {
+    // If no search filter and not forcing refresh, check cache first
+    if (!debouncedSearch && !forceRefresh) {
+      const cached = getCachedData<any[]>(CACHE_KEYS.MEDICINES_LIST);
+      if (cached) {
+        setMedicines(cached);
+        setIsLoading(false);
+        // Still fetch alerts in background
+        api.get('/inventory/alerts')
+          .then((res) => setAlerts(res?.data?.data || null))
+          .catch(() => {});
+        return;
+      }
+    }
+
     setIsLoading(true);
     try {
       const [medsRes, alertsRes] = await Promise.all([
@@ -55,6 +71,9 @@ export default function MedicinesPage() {
         ? rawMeds.items
         : [];
       setMedicines(medsList);
+      if (!debouncedSearch) {
+        setCachedData(CACHE_KEYS.MEDICINES_LIST, medsList, DEFAULT_TTLS.MEDICINES);
+      }
       setAlerts(alertsRes?.data?.data || null);
     } catch (err: any) {
       showToast('Failed to load medicines formulary', 'error');
@@ -89,8 +108,9 @@ export default function MedicinesPage() {
         minimumStock: editMinStock,
       });
       showToast('Medicine master details updated successfully', 'success');
+      clearCache(CACHE_KEYS.MEDICINES_LIST);
       setIsEditOpen(false);
-      fetchMedicines();
+      fetchMedicines(true);
     } catch (err: any) {
       showToast(err.response?.data?.error?.message || 'Failed to update medicine', 'error');
     } finally {
@@ -140,7 +160,7 @@ export default function MedicinesPage() {
       </div>
 
       {/* Alert Summary Metric Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-4 flex items-center justify-between">
             <div>
@@ -210,8 +230,8 @@ export default function MedicinesPage() {
       <Card>
         <CardContent className="p-0 overflow-x-auto">
           {isLoading ? (
-            <div className="p-8 text-center text-xs text-text-secondary animate-pulse">
-              Loading medicine formulary catalog...
+            <div className="p-4">
+              <TableSkeleton rows={6} columns={9} />
             </div>
           ) : medList.length === 0 ? (
             <div className="p-8 text-center text-xs text-text-secondary">
@@ -282,7 +302,8 @@ export default function MedicinesPage() {
                         <button
                           type="button"
                           onClick={() => handleOpenEdit(med)}
-                          className="p-1.5 rounded-lg text-primary hover:bg-primary-50 font-semibold cursor-pointer"
+                          aria-label={`Edit ${med.name}`}
+                          className="min-w-[44px] min-h-[44px] p-2 inline-flex items-center justify-center rounded-xl text-primary hover:bg-primary-50 active:bg-primary-100 font-semibold cursor-pointer transition-colors"
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>

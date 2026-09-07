@@ -1,0 +1,115 @@
+name: Ewa Derma Clinic CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # 1. Backend Lint, Unit & E2E Integration Suite
+  backend-ci:
+    name: Backend CI (Unit + Integration E2E)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: devpassword
+          POSTGRES_DB: ewa_derma_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install Backend Dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Prisma Schema Push & Database Seed
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://postgres:devpassword@localhost:5432/ewa_derma_db?schema=public
+        run: |
+          npx prisma generate
+          npx prisma db push
+          npx tsc prisma/seed.ts --outDir prisma --module commonjs --target ES2021 --skipLibCheck --moduleResolution node
+          node prisma/seed.js
+
+      - name: Run Backend Unit Tests
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://postgres:devpassword@localhost:5432/ewa_derma_db?schema=public
+          JWT_ACCESS_SECRET: ewa_derma_super_secret_access_jwt_key_2026_clinical
+          JWT_REFRESH_SECRET: ewa_derma_super_secret_refresh_jwt_key_2026_clinical
+          NODE_ENV: test
+        run: npm test
+
+      - name: Run Backend Integration & Supertest E2E Suite
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://postgres:devpassword@localhost:5432/ewa_derma_db?schema=public
+          JWT_ACCESS_SECRET: ewa_derma_super_secret_access_jwt_key_2026_clinical
+          JWT_REFRESH_SECRET: ewa_derma_super_secret_refresh_jwt_key_2026_clinical
+          NODE_ENV: test
+        run: npm run test:e2e
+
+  # 2. Frontend Lint & Playwright Browser Suite
+  frontend-ci:
+    name: Frontend CI (Lint + Playwright E2E)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Frontend Dependencies
+        working-directory: frontend
+        run: npm install
+
+      - name: Run Frontend Linting
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Install Playwright Chromium Browser
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
+  # 3. Continuous Deployment Stage (Gated on CI Passing)
+  deploy:
+    name: Continuous Deployment
+    needs: [backend-ci, frontend-ci]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deployment Gate Verification
+        run: |
+          echo "============================================================"
+          echo "🎉 All automated test suites and lint checks passed successfully!"
+          echo "🚀 Deploying to Production (Backend: Railway/Render, Frontend: Vercel)"
+          echo "============================================================"

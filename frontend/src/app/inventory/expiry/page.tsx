@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
+import { TableSkeleton } from '@/components/ui/Skeleton';
 import { Calendar, Package, ShoppingCart, Sliders, AlertTriangle, Trash2 } from 'lucide-react';
 
 export default function ExpiryPage() {
@@ -114,7 +115,7 @@ export default function ExpiryPage() {
           </div>
 
           {/* Urgency Filter Tabs */}
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => setActiveTab('ALL')}
               className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
@@ -161,8 +162,8 @@ export default function ExpiryPage() {
           <Card>
             <CardContent className="p-0 overflow-x-auto">
               {isLoading ? (
-                <div className="p-8 text-center text-xs text-text-secondary animate-pulse">
-                  Loading expiry alert tracking...
+                <div className="p-4">
+                  <TableSkeleton rows={6} columns={7} />
                 </div>
               ) : filteredBatches.length === 0 ? (
                 <div className="p-8 text-center text-xs text-text-secondary">

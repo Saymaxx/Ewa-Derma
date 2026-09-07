@@ -59,7 +59,7 @@ export const Modal: React.FC<ModalProps> = ({
       <div
         className={twMerge(
           clsx(
-            'relative w-full bg-white rounded-2xl shadow-2xl border border-surface-border z-10 animate-in zoom-in-95 duration-200 flex flex-col max-h-[92vh] sm:max-h-[88vh] overflow-hidden my-auto',
+            'relative w-full bg-white rounded-2xl shadow-2xl border border-surface-border z-10 animate-in zoom-in-95 duration-200 flex flex-col max-h-[92dvh] sm:max-h-[88dvh] overflow-hidden my-auto',
             maxStyles[maxWidth],
           ),
         )}
@@ -73,9 +73,9 @@ export const Modal: React.FC<ModalProps> = ({
           <button
             onClick={onClose}
             aria-label="Close dialog"
-            className="text-text-muted hover:text-text-primary rounded-lg p-1.5 transition-colors hover:bg-gray-100 shrink-0"
+            className="text-text-muted hover:text-text-primary rounded-xl min-w-[44px] min-h-[44px] flex items-center justify-center p-2.5 transition-colors hover:bg-gray-100 shrink-0 focus:outline-none focus:ring-2 focus:ring-primary/20"
           >
-            <X className="w-4 h-4" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 

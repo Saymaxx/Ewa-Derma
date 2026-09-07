@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
+import * as compression from 'compression';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -10,15 +11,33 @@ async function bootstrap() {
 
   const configService = app.get(ConfigService);
   const port = configService.get<number>('PORT', 4000);
+  const nodeEnv = configService.get<string>('NODE_ENV', 'development');
   const frontendUrl = configService.get<string>('FRONTEND_URL');
   const corsOrigin = configService.get<string>('CORS_ORIGIN');
+
+  // Register HTTP response compression
+  app.use(compression());
 
   // Set global API prefix
   app.setGlobalPrefix('api');
 
-  // Enable universal CORS (dynamically echoes requesting origin with credentials)
+  // Configure CORS allowed origins
+  const allowedOrigins: string[] = nodeEnv === 'production'
+    ? [frontendUrl, corsOrigin].filter((url): url is string => Boolean(url))
+    : [
+        frontendUrl,
+        corsOrigin,
+        'http://localhost:3000',
+        'http://localhost:3001',
+        'http://localhost:4000',
+        'http://127.0.0.1:3000',
+        'http://127.0.0.1:3001',
+      ].filter((url, idx, self): url is string => Boolean(url) && self.indexOf(url) === idx);
+
+  logger.log(`CORS allowed origins: ${allowedOrigins.length > 0 ? allowedOrigins.join(', ') : 'universal (development fallback)'}`);
+
   app.enableCors({
-    origin: true,
+    origin: allowedOrigins.length > 0 ? allowedOrigins : true,
     credentials: true,
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
     allowedHeaders: [

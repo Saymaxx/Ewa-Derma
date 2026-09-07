@@ -24,7 +24,7 @@ export class PurchasesController {
   @ApiOperation({ summary: 'Record a new stock purchase entry (Stock IN)' })
   @ApiResponse({ status: 201, description: 'Purchase recorded and batch stock updated' })
   async recordPurchase(@Body() dto: CreatePurchaseDto, @Req() req: any) {
-    const userId = req.user?.userId;
+    const userId = req.user?.id;
     return this.purchasesService.recordPurchase(dto, userId);
   }
 }

@@ -24,7 +24,7 @@ export class AdjustmentsController {
   @ApiOperation({ summary: 'Record a manual stock adjustment (Requires written reason)' })
   @ApiResponse({ status: 201, description: 'Stock adjustment recorded successfully' })
   async recordAdjustment(@Body() dto: CreateAdjustmentDto, @Req() req: any) {
-    const userId = req.user?.userId;
+    const userId = req.user?.id;
     return this.adjustmentsService.recordAdjustment(dto, userId);
   }
 }

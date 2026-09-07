@@ -17,18 +17,12 @@ const VALID_INVOICE_TRANSITIONS: Record<InvoiceStatus, InvoiceStatus[]> = {
     InvoiceStatus.CANCELLED,
   ],
   [InvoiceStatus.PENDING]: [
-    InvoiceStatus.PARTIALLY_PAID,
-    InvoiceStatus.PAID,
     InvoiceStatus.CANCELLED,
   ],
   [InvoiceStatus.PARTIALLY_PAID]: [
-    InvoiceStatus.PAID,
     InvoiceStatus.CANCELLED,
-    InvoiceStatus.REFUNDED,
   ],
-  [InvoiceStatus.PAID]: [
-    InvoiceStatus.REFUNDED,
-  ],
+  [InvoiceStatus.PAID]: [],
   [InvoiceStatus.CANCELLED]: [],
   [InvoiceStatus.REFUNDED]: [],
 };
@@ -63,31 +57,52 @@ export class InvoicesService {
       throw new BadRequestException('An invoice must contain at least one line item.');
     }
 
-    // 4. Calculate line item totals and invoice subtotal
+    // 4. Calculate line item totals and invoice subtotal with authoritative server-side price lookup
     let subTotal = 0;
-    const processedItems = dto.items.map((item) => {
-      const itemSubtotal = item.unitPrice * item.quantity;
-      const itemDiscount = item.discount || 0;
-      const itemTaxRate = item.taxRate || 0;
-      const taxableAmount = Math.max(0, itemSubtotal - itemDiscount);
-      const itemTaxAmount = (taxableAmount * itemTaxRate) / 100;
-      const totalPrice = taxableAmount + itemTaxAmount;
+    const processedItems = await Promise.all(
+      dto.items.map(async (item) => {
+        let authoritativeUnitPrice = item.unitPrice;
 
-      subTotal += itemSubtotal;
+        // Authoritative server-side price lookup: override client unitPrice with database catalog price
+        if (item.serviceId) {
+          const service = await this.prisma.service.findUnique({
+            where: { id: item.serviceId },
+          });
+          if (service) {
+            authoritativeUnitPrice = Number(service.basePrice);
+          }
+        } else if (item.medicineId) {
+          const medicine = await this.prisma.medicine.findUnique({
+            where: { id: item.medicineId },
+          });
+          if (medicine) {
+            authoritativeUnitPrice = Number(medicine.unitPrice);
+          }
+        }
 
-      return {
-        serviceId: item.serviceId || null,
-        medicineId: item.medicineId || null,
-        itemType: item.itemType,
-        description: item.description,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        discount: itemDiscount,
-        taxRate: itemTaxRate,
-        taxAmount: itemTaxAmount,
-        totalPrice,
-      };
-    });
+        const itemSubtotal = authoritativeUnitPrice * item.quantity;
+        const itemDiscount = item.discount || 0;
+        const itemTaxRate = item.taxRate || 0;
+        const taxableAmount = Math.max(0, itemSubtotal - itemDiscount);
+        const itemTaxAmount = (taxableAmount * itemTaxRate) / 100;
+        const totalPrice = taxableAmount + itemTaxAmount;
+
+        subTotal += itemSubtotal;
+
+        return {
+          serviceId: item.serviceId || null,
+          medicineId: item.medicineId || null,
+          itemType: item.itemType,
+          description: item.description,
+          quantity: item.quantity,
+          unitPrice: authoritativeUnitPrice,
+          discount: itemDiscount,
+          taxRate: itemTaxRate,
+          taxAmount: itemTaxAmount,
+          totalPrice,
+        };
+      }),
+    );
 
     const invoiceTaxRate = dto.taxRate || 0;
     const netBeforeTax = Math.max(0, subTotal - discountAmount);
@@ -158,7 +173,13 @@ export class InvoicesService {
     status?: InvoiceStatus;
     startDate?: string;
     endDate?: string;
+    page?: number;
+    limit?: number;
   }) {
+    const safePage = Math.max(1, isNaN(Number(query.page)) ? 1 : Number(query.page));
+    const safeLimit = Math.max(1, isNaN(Number(query.limit)) ? 20 : Number(query.limit));
+    const skip = (safePage - 1) * safeLimit;
+
     const where: any = {};
 
     if (query.patientId) {
@@ -179,23 +200,36 @@ export class InvoicesService {
       }
     }
 
-    return this.prisma.invoice.findMany({
-      where,
-      include: {
-        patient: {
-          select: {
-            id: true,
-            patientCode: true,
-            firstName: true,
-            lastName: true,
-            phone: true,
+    const [invoices, total] = await Promise.all([
+      this.prisma.invoice.findMany({
+        where,
+        include: {
+          patient: {
+            select: {
+              id: true,
+              patientCode: true,
+              firstName: true,
+              lastName: true,
+              phone: true,
+            },
           },
+          items: true,
+          payments: true,
         },
-        items: true,
-        payments: true,
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: safeLimit,
+      }),
+      this.prisma.invoice.count({ where }),
+    ]);
+
+    return {
+      items: invoices,
+      total,
+      page: safePage,
+      limit: safeLimit,
+      totalPages: Math.ceil(total / safeLimit),
+    };
   }
 
   async findOne(id: string) {

@@ -4,11 +4,13 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import { useToast } from '@/components/ui/Toast';
+import { getCachedData, setCachedData, clearCache, CACHE_KEYS, DEFAULT_TTLS } from '@/lib/cache';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
+import { CardSkeleton } from '@/components/ui/Skeleton';
 import {
   Stethoscope,
   Clock,
@@ -40,12 +42,23 @@ export default function DoctorsPage() {
     workingHours: '10:00-19:00',
   });
 
-  const fetchDoctors = useCallback(async () => {
+  const fetchDoctors = useCallback(async (forceRefresh = false) => {
+    if (!forceRefresh) {
+      const cached = getCachedData<any[]>(CACHE_KEYS.DOCTORS_LIST);
+      if (cached) {
+        setDoctors(cached);
+        setIsLoading(false);
+        return;
+      }
+    }
+
     setIsLoading(true);
     try {
       const res = await api.get('/doctors');
       const rawDoctors = res?.data?.data ?? res?.data;
-      setDoctors(Array.isArray(rawDoctors) ? rawDoctors : []);
+      const list = Array.isArray(rawDoctors) ? rawDoctors : [];
+      setDoctors(list);
+      setCachedData(CACHE_KEYS.DOCTORS_LIST, list, DEFAULT_TTLS.DOCTORS);
     } catch {
       showToast('Failed to load doctors roster', 'error');
       setDoctors([]);
@@ -78,8 +91,9 @@ export default function DoctorsPage() {
     try {
       await api.patch(`/doctors/${editDoctor.id}`, editForm);
       showToast('Doctor profile updated successfully', 'success');
+      clearCache(CACHE_KEYS.DOCTORS_LIST);
       setEditDoctor(null);
-      fetchDoctors();
+      fetchDoctors(true);
     } catch (err: any) {
       showToast(err.response?.data?.error?.message || 'Update failed', 'error');
     } finally {
@@ -113,9 +127,9 @@ export default function DoctorsPage() {
 
       {/* Doctors Grid */}
       {isLoading ? (
-        <div className="p-16 flex flex-col items-center justify-center gap-2 text-text-secondary">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          <p className="text-xs">Loading doctors roster...</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <CardSkeleton rows={4} />
+          <CardSkeleton rows={4} />
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

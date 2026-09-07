@@ -2,6 +2,17 @@ import React, { TableHTMLAttributes, HTMLAttributes, TdHTMLAttributes, ThHTMLAtt
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
+/**
+ * Performance & Virtualization Readiness Note:
+ * Standard clinic workflows use server-side pagination (limit: 20–50 rows per page),
+ * which ensures fast initial render and low DOM node count across /invoices, /patients,
+ * /appointments, and /inventory.
+ *
+ * If future features introduce an unpaginated "View All" / infinite-scroll mode with >500 rows,
+ * wrap TableBody with a windowed virtualization engine (e.g. `@tanstack/react-virtual` or `react-window`)
+ * without changing the Table component API contract.
+ */
+
 export const Table: React.FC<TableHTMLAttributes<HTMLTableElement>> = ({
   className,
   children,

@@ -20,7 +20,7 @@ export class DispensingController {
     @Body() dto: DispensePrescriptionDto,
     @Req() req: any,
   ) {
-    const userId = req.user?.userId;
+    const userId = req.user?.id;
     return this.dispensingService.dispensePrescription(id, dto, userId);
   }
 }

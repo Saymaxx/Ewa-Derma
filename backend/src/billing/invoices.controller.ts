@@ -37,12 +37,16 @@ export class InvoicesController {
     @Query('status') status?: InvoiceStatus,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
   ) {
     return this.invoicesService.findAll({
       patientId,
       status,
       startDate,
       endDate,
+      page,
+      limit,
     });
   }
 

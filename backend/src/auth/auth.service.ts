@@ -251,6 +251,11 @@ export class AuthService {
   private cachedClinicSetting: any = null;
   private lastClinicFetchTime: number = 0;
 
+  invalidateClinicCache() {
+    this.cachedClinicSetting = null;
+    this.lastClinicFetchTime = 0;
+  }
+
   async getProfile(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },

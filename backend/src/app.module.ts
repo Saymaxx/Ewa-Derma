@@ -19,11 +19,14 @@ import { SuppliersModule } from './suppliers/suppliers.module';
 import { InventoryModule } from './inventory/inventory.module';
 import { NotificationsModule } from './notifications/notifications.module';
 
+import { validateEnv } from './common/config/env.validation';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ['.env', '.env.local'],
+      validate: validateEnv,
     }),
     ScheduleModule.forRoot(),
     ThrottlerModule.forRootAsync({
