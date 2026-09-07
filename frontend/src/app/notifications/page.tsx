@@ -199,6 +199,7 @@ export default function NotificationsLogPage() {
               className="h-9 rounded-xl border border-surface-border bg-white px-3 text-xs focus:border-primary focus:outline-none"
             >
               <option value="">All Notification Types</option>
+              <option value="PATIENT_REGISTRATION">Patient Registration</option>
               <option value="INVOICE_SENT">Invoice Delivery</option>
               <option value="PRESCRIPTION_SENT">Digital Rx Delivery</option>
               <option value="APPOINTMENT_REMINDER">24h OPD Reminder</option>

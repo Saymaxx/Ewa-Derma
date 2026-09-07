@@ -3,6 +3,7 @@ import { NotFoundException } from '@nestjs/common';
 import { PatientsService } from './patients.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityIdService } from '../common/services/entity-id.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { Gender, BloodGroup } from '@prisma/client';
 
 describe('PatientsService', () => {
@@ -24,12 +25,17 @@ describe('PatientsService', () => {
     generateNextId: jest.fn(),
   };
 
+  const mockNotificationsService = {
+    dispatch: jest.fn().mockResolvedValue({ id: 'notif-1', status: 'SENT' }),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PatientsService,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: EntityIdService, useValue: mockEntityIdService },
+        { provide: NotificationsService, useValue: mockNotificationsService },
       ],
     }).compile();
 

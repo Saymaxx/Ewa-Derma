@@ -112,6 +112,7 @@ enum NotificationType {
   INVOICE_SENT
   PRESCRIPTION_SENT
   APPOINTMENT_REMINDER
+  PATIENT_REGISTRATION
 }
 
 // ==========================================

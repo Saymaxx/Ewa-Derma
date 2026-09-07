@@ -33,6 +33,18 @@ describe('Environment Variable Validation (validateEnv)', () => {
     expect(validated.NODE_ENV).toBe(Environment.Production);
   });
 
+  it('should allow production startup when JWT_SECRET alias is provided instead of JWT_ACCESS_SECRET', () => {
+    const config = {
+      ...baseValidConfig,
+      NODE_ENV: 'production',
+      JWT_SECRET: 'secure_custom_production_jwt_access_secret_998877665544332211',
+      JWT_REFRESH_SECRET: 'secure_custom_production_jwt_refresh_secret_998877665544332211',
+    };
+
+    const validated = validateEnv(config);
+    expect(validated.NODE_ENV).toBe(Environment.Production);
+  });
+
   it('should hard throw at startup in production if JWT_ACCESS_SECRET is missing or equals dev secret', () => {
     const config = {
       ...baseValidConfig,

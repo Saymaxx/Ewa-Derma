@@ -24,10 +24,44 @@ export interface AppointmentReminderTemplateData {
   contactPhone?: string;
 }
 
+export interface PatientRegistrationTemplateData {
+  patientName: string;
+  patientId: string;
+  clinicName?: string;
+  contactPhone?: string;
+}
+
+export const META_TEMPLATES = {
+  PATIENT_REGISTRATION: {
+    name: 'patient_registration_confirmation',
+    category: 'UTILITY',
+    language: 'en',
+    sample: 'Welcome to Ewa Derma Clinic, {{1}}! Your registration is confirmed. Patient ID: {{2}}. For appointments, call 0120-5244840.',
+  },
+} as const;
+
 export class NotificationTemplates {
   private static readonly CLINIC_NAME = 'Ewa Derma Clinic';
-  private static readonly CLINIC_PHONE = '+91 98765 43210';
+  private static readonly CLINIC_PHONE = '0120-5244840';
   private static readonly CLINIC_ADDRESS = 'Sector 18, Transport Nagar, Lucknow';
+
+  static patientRegistration(data: PatientRegistrationTemplateData) {
+    const clinic = data.clinicName || this.CLINIC_NAME;
+    const phone = data.contactPhone || this.CLINIC_PHONE;
+    const subject = `Welcome to ${clinic} — Registration Confirmed (${data.patientId})`;
+
+    // Exact approved wording for Meta WhatsApp Cloud API template:
+    // "Welcome to Ewa Derma Clinic, {{1}}! Your registration is confirmed. Patient ID: {{2}}. For appointments, call 0120-5244840."
+    const content = `Welcome to ${clinic}, ${data.patientName}! Your registration is confirmed. Patient ID: ${data.patientId}. For appointments, call ${phone}.`;
+
+    return {
+      subject,
+      content,
+      templateName: META_TEMPLATES.PATIENT_REGISTRATION.name,
+      templateLanguage: META_TEMPLATES.PATIENT_REGISTRATION.language,
+      templateParameters: [data.patientName, data.patientId],
+    };
+  }
 
   static invoiceSent(data: InvoiceTemplateData) {
     const clinic = data.clinicName || this.CLINIC_NAME;

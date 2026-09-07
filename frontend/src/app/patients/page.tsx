@@ -102,10 +102,25 @@ export default function PatientsPage() {
 
     setIsSubmitting(true);
     try {
-      const res = await api.post('/patients', formData);
+      const payload = {
+        ...formData,
+        firstName: formData.firstName.trim(),
+        lastName: formData.lastName.trim(),
+        phone: formData.phone.trim(),
+        email: formData.email.trim() ? formData.email.trim() : undefined,
+        dateOfBirth: formData.dateOfBirth ? formData.dateOfBirth : undefined,
+        address: formData.address.trim() ? formData.address.trim() : undefined,
+        city: formData.city.trim() ? formData.city.trim() : undefined,
+        state: formData.state.trim() ? formData.state.trim() : undefined,
+        emergencyContact: formData.emergencyContact.trim() ? formData.emergencyContact.trim() : undefined,
+        medicalHistory: formData.medicalHistory.trim() ? formData.medicalHistory.trim() : undefined,
+        allergies: formData.allergies.trim() ? formData.allergies.trim() : undefined,
+      };
+
+      const res = await api.post('/patients', payload);
       const newPatient = res.data.data;
       showToast(
-        `Patient ${newPatient.patientCode} (${newPatient.firstName} ${newPatient.lastName}) registered successfully`,
+        `Patient ${newPatient.patientCode} (${newPatient.firstName} ${newPatient.lastName}) registered successfully. WhatsApp confirmation triggered.`,
         'success',
         'Patient Registered',
       );

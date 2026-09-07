@@ -88,7 +88,7 @@ describe('Notifications Module Unit Tests', () => {
       mockPrismaService.notification.update.mockResolvedValue({
         id: 'notif-2',
         status: NotificationStatus.FAILED,
-        errorLog: "WhatsApp isn't connected yet (WHATSAPP_API_KEY / WHATSAPP_API_URL missing in clinic configuration)",
+        errorLog: "WhatsApp isn't connected yet (WHATSAPP_ACCESS_TOKEN / WHATSAPP_PHONE_NUMBER_ID missing in clinic configuration)",
       });
 
       const res = await notificationsService.dispatch({

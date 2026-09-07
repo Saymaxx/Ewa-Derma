@@ -2,6 +2,9 @@ export interface SendNotificationOptions {
   recipient: string;
   subject?: string;
   content: string;
+  templateName?: string;
+  templateLanguage?: string;
+  templateParameters?: string[];
   pdfBuffer?: Buffer | Uint8Array;
   pdfFilename?: string;
 }

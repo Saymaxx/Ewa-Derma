@@ -45,7 +45,7 @@ export default function ReportsPage() {
 
   const isAdmin = hasRole(['ADMIN']);
   const isDoctor = hasRole(['DOCTOR']);
-  const isInventoryManager = hasRole(['INVENTORY_MANAGER']);
+  const isAuthorized = hasRole(['ADMIN', 'RECEPTIONIST', 'DOCTOR']);
 
   // Date range defaults (September 2026 active clinical data window)
   const [activeTab, setActiveTab] = useState<'appointments' | 'patients' | 'revenue' | 'inventory'>('appointments');
@@ -82,6 +82,11 @@ export default function ReportsPage() {
 
   // Fetch report data based on active tab and filters
   const fetchReportData = useCallback(async () => {
+    if (!isAuthorized) {
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     try {
       if (activeTab === 'appointments') {
@@ -110,7 +115,7 @@ export default function ReportsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [activeTab, startDate, endDate, selectedDoctorId, showToast]);
+  }, [activeTab, startDate, endDate, selectedDoctorId, isAuthorized, showToast]);
 
   useEffect(() => {
     fetchReportData();
@@ -180,6 +185,23 @@ export default function ReportsPage() {
       setIsExporting(null);
     }
   };
+
+  if (!isAuthorized) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[50vh] p-8 text-center">
+        <div className="w-16 h-16 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mb-4">
+          <AlertTriangle className="w-8 h-8" />
+        </div>
+        <h2 className="text-xl font-bold font-serif text-text-primary mb-2">Access Restricted</h2>
+        <p className="text-sm text-text-secondary max-w-md mb-6">
+          Clinical reports and business analytics are reserved for Clinic Administrators, Doctors, and Front Desk Receptionists.
+        </p>
+        <Button variant="primary" onClick={() => window.location.href = '/dashboard'}>
+          Return to Dashboard
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -370,7 +392,7 @@ export default function ReportsPage() {
             </button>
           )}
 
-          {(isAdmin || isInventoryManager) && (
+          {isAdmin && (
             <button
               type="button"
               onClick={() => setActiveTab('inventory')}

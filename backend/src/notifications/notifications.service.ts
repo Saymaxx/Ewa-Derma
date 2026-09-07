@@ -10,6 +10,8 @@ export interface DispatchNotificationDto {
   type: NotificationType;
   recipient: string;
   templateName?: string;
+  templateLanguage?: string;
+  templateParameters?: string[];
   subject?: string;
   content: string;
   relatedEntity?: string;
@@ -51,6 +53,9 @@ export class NotificationsService {
       recipient: dto.recipient.trim(),
       subject: dto.subject,
       content: dto.content,
+      templateName: dto.templateName,
+      templateLanguage: dto.templateLanguage,
+      templateParameters: dto.templateParameters,
       pdfBuffer: dto.pdfBuffer,
       pdfFilename: dto.pdfFilename,
     };

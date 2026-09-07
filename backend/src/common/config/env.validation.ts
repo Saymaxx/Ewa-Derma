@@ -28,6 +28,10 @@ export class EnvironmentVariables {
 
   @IsString()
   @IsOptional()
+  JWT_SECRET?: string;
+
+  @IsString()
+  @IsOptional()
   JWT_REFRESH_SECRET?: string;
 
   @IsString()
@@ -66,7 +70,7 @@ export class EnvironmentVariables {
   @IsString()
   SMTP_FROM?: string;
 
-  @IsOptional()
+   @IsOptional()
   @IsString()
   WHATSAPP_API_URL?: string;
 
@@ -76,7 +80,19 @@ export class EnvironmentVariables {
 
   @IsOptional()
   @IsString()
+  WHATSAPP_ACCESS_TOKEN?: string;
+
+  @IsOptional()
+  @IsString()
   WHATSAPP_PHONE_NUMBER_ID?: string;
+
+  @IsOptional()
+  @IsString()
+  WHATSAPP_BUSINESS_ACCOUNT_ID?: string;
+
+  @IsOptional()
+  @IsString()
+  WHATSAPP_API_VERSION?: string;
 }
 
 export function validateEnv(config: Record<string, unknown>) {
@@ -97,7 +113,7 @@ export function validateEnv(config: Record<string, unknown>) {
 
   // STRICT PRODUCTION SECURITY CHECK
   if (isProd) {
-    const accessSecret = validatedConfig.JWT_ACCESS_SECRET;
+    const accessSecret = validatedConfig.JWT_ACCESS_SECRET || validatedConfig.JWT_SECRET;
     const refreshSecret = validatedConfig.JWT_REFRESH_SECRET;
 
     const accessIsInvalid = !accessSecret || accessSecret === DEV_JWT_ACCESS_SECRET;
@@ -106,7 +122,7 @@ export function validateEnv(config: Record<string, unknown>) {
     if (accessIsInvalid || refreshIsInvalid) {
       const issues: string[] = [];
       if (accessIsInvalid) {
-        issues.push('JWT_ACCESS_SECRET is missing or set to the known default development secret');
+        issues.push('JWT_ACCESS_SECRET (or JWT_SECRET) is missing or set to the known default development secret');
       }
       if (refreshIsInvalid) {
         issues.push('JWT_REFRESH_SECRET is missing or set to the known default development secret');

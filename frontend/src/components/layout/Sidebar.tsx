@@ -115,7 +115,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
       label: 'Reports & Analytics',
       href: '/reports',
       icon: <FileSpreadsheet className="w-5 h-5" />,
-      roles: ['ADMIN', 'RECEPTIONIST', 'DOCTOR', 'INVENTORY_MANAGER'],
+      roles: ['ADMIN', 'RECEPTIONIST', 'DOCTOR'],
     },
     {
       label: 'Notification Log',

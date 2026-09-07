@@ -1,6 +1,9 @@
 import { Injectable, NotFoundException, ConflictException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityIdService } from '../common/services/entity-id.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationTemplates } from '../notifications/templates/notification.templates';
+import { NotificationChannel, NotificationType } from '@prisma/client';
 import { CreatePatientDto } from './dto/create-patient.dto';
 import { UpdatePatientDto } from './dto/update-patient.dto';
 
@@ -11,6 +14,7 @@ export class PatientsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly entityIdService: EntityIdService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async create(dto: CreatePatientDto) {
@@ -64,6 +68,34 @@ export class PatientsService {
     });
 
     this.logger.log(`Created new patient: ${patient.patientCode} (${patient.firstName} ${patient.lastName})`);
+
+    // Part C: Fire-and-forget WhatsApp registration confirmation
+    if (patient.phone && patient.phone.trim()) {
+      const template = NotificationTemplates.patientRegistration({
+        patientName: `${patient.firstName} ${patient.lastName}`.trim(),
+        patientId: patient.patientCode,
+      });
+
+      this.notificationsService
+        .dispatch({
+          channel: NotificationChannel.WHATSAPP,
+          type: NotificationType.PATIENT_REGISTRATION,
+          recipient: patient.phone,
+          templateName: template.templateName,
+          templateLanguage: template.templateLanguage,
+          templateParameters: template.templateParameters,
+          subject: template.subject,
+          content: template.content,
+          relatedEntity: 'PATIENT',
+          relatedEntityId: patient.id,
+        })
+        .catch((err) => {
+          this.logger.error(
+            `Async WhatsApp registration notification failed for patient ${patient.patientCode}: ${err.message}`,
+          );
+        });
+    }
+
     return patient;
   }
 
