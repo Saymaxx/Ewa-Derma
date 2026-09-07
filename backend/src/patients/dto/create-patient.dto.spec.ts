@@ -79,7 +79,7 @@ describe('CreatePatientDto Validation', () => {
       firstName: 'Rahul',
       lastName: 'Sharma',
       phone: '9876543210',
-      dateOfBirth: '31-02-1990', // Non-ISO format
+      dateOfBirth: '31-02-1990',
     };
 
     const { errors } = await transformAndValidate(rawData);
@@ -106,7 +106,7 @@ describe('CreatePatientDto Validation', () => {
     const rawData = {
       firstName: 'Rahul',
       lastName: 'Sharma',
-      phone: '123', // Too short
+      phone: '123',
     };
 
     const { errors } = await transformAndValidate(rawData);

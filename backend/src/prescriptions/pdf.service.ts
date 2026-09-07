@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { PDFDocument, rgb, StandardFonts, PDFFont } from 'pdf-lib';
 import { getClinicLogoBuffer } from '../common/utils/logo.util';
 
 export interface PrescriptionPdfData {
@@ -33,9 +33,32 @@ export interface PrescriptionPdfData {
 export class PdfService {
   private readonly logger = new Logger(PdfService.name);
 
+  /**
+   * Helper to wrap long text within a maximum pixel width
+   */
+  private wrapText(text: string, font: PDFFont, fontSize: number, maxWidth: number): string[] {
+    if (!text || text.trim().length === 0) return [];
+    const words = text.trim().split(/\s+/);
+    const lines: string[] = [];
+    let currentLine = '';
+
+    for (const word of words) {
+      const testLine = currentLine ? `${currentLine} ${word}` : word;
+      const width = font.widthOfTextAtSize(testLine, fontSize);
+      if (width <= maxWidth) {
+        currentLine = testLine;
+      } else {
+        if (currentLine) lines.push(currentLine);
+        currentLine = word;
+      }
+    }
+    if (currentLine) lines.push(currentLine);
+    return lines;
+  }
+
   async generatePrescriptionPdf(data: PrescriptionPdfData): Promise<Uint8Array> {
     const pdfDoc = await PDFDocument.create();
-    const page = pdfDoc.addPage([595.28, 841.89]); // Standard A4 (points)
+    const page = pdfDoc.addPage([595.28, 841.89]); // Standard A4 Size
     const { width, height } = page.getSize();
 
     const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
@@ -43,15 +66,24 @@ export class PdfService {
     const fontItalic = await pdfDoc.embedFont(StandardFonts.HelveticaOblique);
 
     // Color Palette Tokens
-    const primaryBlue = rgb(30 / 255, 78 / 255, 140 / 255); // #1E4E8C
-    const accentGold = rgb(201 / 255, 162 / 255, 75 / 255);  // #C9A24B
-    const textDark = rgb(27 / 255, 38 / 59 / 255, 59 / 255);    // #1B263B
-    const textMuted = rgb(100 / 255, 116 / 255, 139 / 255); // #64748B
-    const surfaceGray = rgb(247 / 255, 248 / 255, 250 / 255);
-    const borderGray = rgb(226 / 255, 232 / 255, 240 / 255);
+    const primaryBlue = rgb(30 / 255, 78 / 255, 140 / 255);    // #1E4E8C Royal Navy
+    const primaryDark = rgb(19 / 255, 52 / 255, 96 / 255);     // #133460
+    const accentGold = rgb(201 / 255, 162 / 255, 75 / 255);    // #C9A24B Warm Gold
+    const textDark = rgb(27 / 255, 38 / 255, 59 / 255);        // #1B263B Slate Dark
+    const textMuted = rgb(100 / 255, 116 / 255, 139 / 255);   // #64748B Slate Muted
+    const surfaceGray = rgb(248 / 255, 250 / 255, 252 / 255);  // #F8FAFC Subtle Gray
+    const surfaceAlt = rgb(241 / 255, 245 / 255, 249 / 255);   // #F1F5F9 Row Alternate
+    const borderGray = rgb(226 / 255, 232 / 255, 240 / 255);   // #E2E8F0 Clean Border
 
-    // 1. TOP HEADER BANNER (Blue Background)
-    const headerHeight = 90;
+    // Normalize Doctor Name (prevent "Dr. Dr. Name")
+    const cleanDocName = data.doctorName.trim().startsWith('Dr.')
+      ? data.doctorName.trim()
+      : `Dr. ${data.doctorName.trim()}`;
+
+    // =========================================================================
+    // 1. TOP CLINIC BRANDING HEADER BANNER
+    // =========================================================================
+    const headerHeight = 88;
     page.drawRectangle({
       x: 0,
       y: height - headerHeight,
@@ -60,7 +92,7 @@ export class PdfService {
       color: primaryBlue,
     });
 
-    // Gold Accent Line
+    // Gold Accent Ribbon
     page.drawRectangle({
       x: 0,
       y: height - headerHeight - 4,
@@ -69,46 +101,47 @@ export class PdfService {
       color: accentGold,
     });
 
-    // Clinic Branding Header
+    // Clinic Title
     page.drawText(data.clinicName.toUpperCase(), {
       x: 35,
-      y: height - 40,
-      size: 20,
+      y: height - 38,
+      size: 19,
       font: fontBold,
       color: rgb(1, 1, 1),
     });
 
-    page.drawText('DERMATOLOGY, AESTHETICS & HAIR CARE CLINIC', {
+    // Subtitle
+    page.drawText('DERMATOLOGY, AESTHETICS & ADVANCED HAIR CARE CLINIC', {
       x: 35,
-      y: height - 56,
+      y: height - 54,
       size: 8,
       font: fontBold,
       color: accentGold,
     });
 
+    // Address & Phone
     page.drawText(`${data.clinicAddress} | Phone: ${data.clinicPhone}`, {
       x: 35,
-      y: height - 74,
+      y: height - 72,
       size: 7.5,
       font: fontRegular,
-      color: rgb(0.9, 0.93, 0.98),
+      color: rgb(0.92, 0.95, 0.99),
     });
 
-    // Embed Clinic Logo Image in Header (Right Side)
+    // Embed Clinic Logo Image (Top-Right)
     const logoBuffer = getClinicLogoBuffer();
     if (logoBuffer) {
       try {
         const logoImg = await pdfDoc.embedJpg(logoBuffer);
-        const logoSize = 64;
+        const logoSize = 62;
         const logoX = width - 35 - logoSize;
         const logoY = height - headerHeight + (headerHeight - logoSize) / 2;
 
-        // Subtle white container backing for crisp emblem display
         page.drawRectangle({
-          x: logoX - 3,
-          y: logoY - 3,
-          width: logoSize + 6,
-          height: logoSize + 6,
+          x: logoX - 2,
+          y: logoY - 2,
+          width: logoSize + 4,
+          height: logoSize + 4,
           color: rgb(1, 1, 1),
           borderColor: accentGold,
           borderWidth: 1.5,
@@ -121,22 +154,26 @@ export class PdfService {
           height: logoSize,
         });
       } catch (err: any) {
-        this.logger.warn(`Could not embed logo image: ${err.message}`);
+        this.logger.warn(`Could not embed logo image in prescription: ${err.message}`);
       }
     }
 
+    // =========================================================================
     // 2. DOCTOR & PRESCRIPTION METADATA BAR
-    let currentY = height - headerHeight - 28;
+    // =========================================================================
+    let currentY = height - headerHeight - 26;
 
-    // Doctor info (Left)
-    page.drawText(`Dr. ${data.doctorName}`, {
+    // Doctor Details (Left)
+    page.drawText(cleanDocName, {
       x: 35,
       y: currentY,
       size: 11,
       font: fontBold,
       color: primaryBlue,
     });
-    page.drawText(`${data.doctorSpecialization}${data.doctorRegNumber ? ` | Reg. No: ${data.doctorRegNumber}` : ''}`, {
+
+    const docSub = `${data.doctorSpecialization}${data.doctorRegNumber ? ` | Reg. No: ${data.doctorRegNumber}` : ''}`;
+    page.drawText(docSub, {
       x: 35,
       y: currentY - 14,
       size: 8.5,
@@ -145,10 +182,10 @@ export class PdfService {
     });
 
     // Prescription ID & Version (Right)
-    const rxText = `Rx: ${data.prescriptionCode} (v${data.version})`;
-    const rxWidth = fontBold.widthOfTextAtSize(rxText, 11);
-    page.drawText(rxText, {
-      x: width - 35 - rxWidth,
+    const rxCodeText = `Rx: ${data.prescriptionCode} (v${data.version})`;
+    const rxCodeWidth = fontBold.widthOfTextAtSize(rxCodeText, 11);
+    page.drawText(rxCodeText, {
+      x: width - 35 - rxCodeWidth,
       y: currentY,
       size: 11,
       font: fontBold,
@@ -165,84 +202,73 @@ export class PdfService {
       color: textMuted,
     });
 
-    // Divider Line
-    currentY -= 28;
+    // Hairline Separator
+    currentY -= 24;
     page.drawLine({
       start: { x: 35, y: currentY },
       end: { x: width - 35, y: currentY },
-      thickness: 1,
+      thickness: 0.75,
       color: borderGray,
     });
 
-    // 3. PATIENT INFORMATION CARD
-    currentY -= 14;
-    const cardHeight = 44;
+    // =========================================================================
+    // 3. PATIENT INFORMATION CARD (Balanced Grid)
+    // =========================================================================
+    currentY -= 12;
+    const patientCardHeight = 46;
     page.drawRectangle({
       x: 35,
-      y: currentY - cardHeight,
+      y: currentY - patientCardHeight,
       width: width - 70,
-      height: cardHeight,
+      height: patientCardHeight,
       color: surfaceGray,
       borderColor: borderGray,
       borderWidth: 1,
     });
 
-    page.drawText('PATIENT DETAILS', {
+    // Patient Details Header Tag
+    page.drawText('PATIENT INFORMATION', {
       x: 48,
-      y: currentY - 16,
-      size: 7.5,
+      y: currentY - 14,
+      size: 7,
       font: fontBold,
       color: accentGold,
     });
 
-    page.drawText(`Name: ${data.patientName}`, {
-      x: 48,
-      y: currentY - 32,
-      size: 9.5,
-      font: fontBold,
-      color: textDark,
-    });
+    // Col 1: Name
+    page.drawText('Name:', { x: 48, y: currentY - 28, size: 8, font: fontRegular, color: textMuted });
+    page.drawText(data.patientName, { x: 78, y: currentY - 28, size: 9, font: fontBold, color: textDark });
 
-    page.drawText(`Patient ID: ${data.patientCode}`, {
-      x: 230,
-      y: currentY - 32,
-      size: 9,
-      font: fontRegular,
-      color: textDark,
-    });
+    // Col 2: Patient ID
+    page.drawText('Patient ID:', { x: 200, y: currentY - 28, size: 8, font: fontRegular, color: textMuted });
+    page.drawText(data.patientCode, { x: 245, y: currentY - 28, size: 8.5, font: fontBold, color: primaryBlue });
 
-    page.drawText(`Age / Gender: ${data.patientAgeGender}`, {
-      x: 350,
-      y: currentY - 32,
-      size: 9,
-      font: fontRegular,
-      color: textDark,
-    });
+    // Col 3: Gender / Age
+    page.drawText('Gender/Age:', { x: 320, y: currentY - 28, size: 8, font: fontRegular, color: textMuted });
+    page.drawText(data.patientAgeGender || 'Not Specified', { x: 375, y: currentY - 28, size: 8.5, font: fontRegular, color: textDark });
 
-    page.drawText(`Phone: ${data.patientPhone}`, {
-      x: 480,
-      y: currentY - 32,
-      size: 9,
-      font: fontRegular,
-      color: textDark,
-    });
+    // Col 4: Phone
+    page.drawText('Contact:', { x: 445, y: currentY - 28, size: 8, font: fontRegular, color: textMuted });
+    page.drawText(data.patientPhone || 'N/A', { x: 482, y: currentY - 28, size: 8.5, font: fontRegular, color: textDark });
 
-    currentY -= cardHeight + 20;
+    currentY -= patientCardHeight + 16;
 
-    // 4. DIAGNOSIS SECTION
+    // =========================================================================
+    // 4. CLINICAL DIAGNOSIS (If Available)
+    // =========================================================================
     if (data.diagnoses && data.diagnoses.length > 0) {
-      page.drawText('PROVISIONAL / CLINICAL DIAGNOSIS:', {
+      page.drawText('DIAGNOSIS / FINDINGS:', {
         x: 35,
         y: currentY,
-        size: 9,
+        size: 8.5,
         font: fontBold,
         color: primaryBlue,
       });
 
       page.drawText(data.diagnoses.join(', '), {
-        x: 220,
+        x: 165,
         y: currentY,
-        size: 9,
+        size: 8.5,
         font: fontBold,
         color: textDark,
       });
@@ -250,180 +276,280 @@ export class PdfService {
       currentY -= 18;
     }
 
-    // 5. RX / MEDICINES TABLE HEADER
-    page.drawText('Rx (Medications & Dosage)', {
+    // =========================================================================
+    // 5. RX MEDICATIONS & DOSAGE TABLE (Impeccably Structured & Aligned)
+    // =========================================================================
+    // Section Title
+    page.drawText('Rx (Medications & Dosage Schedule)', {
       x: 35,
       y: currentY,
-      size: 11,
+      size: 10.5,
       font: fontBold,
       color: primaryBlue,
     });
 
     currentY -= 14;
 
-    // Table Header Bar
-    const tableHeaderY = currentY;
+    // Column Definitions:
+    // Available Total Table Width = 595.28 - 70 = 525.28
+    const colPos = {
+      num: 43,      // # (Width: 22)
+      name: 68,     // Medicine Name & Strength (Width: 192)
+      freq: 265,    // Frequency / Timing (Width: 105)
+      dur: 375,     // Duration (Width: 65)
+      route: 445,   // Route & Instructions (Width: 115)
+    };
+
+    // Table Header Bar (Height: 22, perfectly centered vertically)
+    const thHeight = 22;
     page.drawRectangle({
       x: 35,
-      y: tableHeaderY - 18,
+      y: currentY - thHeight,
       width: width - 70,
-      height: 18,
+      height: thHeight,
       color: primaryBlue,
     });
 
-    page.drawText('#', { x: 42, y: tableHeaderY - 13, size: 7.5, font: fontBold, color: rgb(1, 1, 1) });
-    page.drawText('MEDICINE NAME & STRENGTH', { x: 65, y: tableHeaderY - 13, size: 7.5, font: fontBold, color: rgb(1, 1, 1) });
-    page.drawText('FREQUENCY', { x: 250, y: tableHeaderY - 13, size: 7.5, font: fontBold, color: rgb(1, 1, 1) });
-    page.drawText('DURATION', { x: 360, y: tableHeaderY - 13, size: 7.5, font: fontBold, color: rgb(1, 1, 1) });
-    page.drawText('ROUTE / INSTRUCTIONS', { x: 435, y: tableHeaderY - 13, size: 7.5, font: fontBold, color: rgb(1, 1, 1) });
+    // Gold accent underline on table header
+    page.drawRectangle({
+      x: 35,
+      y: currentY - thHeight - 1.5,
+      width: width - 70,
+      height: 1.5,
+      color: accentGold,
+    });
 
-    currentY -= 20;
+    const thTextY = currentY - 14.5;
+    page.drawText('#', { x: colPos.num, y: thTextY, size: 7.5, font: fontBold, color: rgb(1, 1, 1) });
+    page.drawText('MEDICINE NAME & STRENGTH', { x: colPos.name, y: thTextY, size: 7.5, font: fontBold, color: rgb(1, 1, 1) });
+    page.drawText('FREQUENCY / TIMING', { x: colPos.freq, y: thTextY, size: 7.5, font: fontBold, color: rgb(1, 1, 1) });
+    page.drawText('DURATION', { x: colPos.dur, y: thTextY, size: 7.5, font: fontBold, color: rgb(1, 1, 1) });
+    page.drawText('ROUTE / INSTRUCTIONS', { x: colPos.route, y: thTextY, size: 7.5, font: fontBold, color: rgb(1, 1, 1) });
 
-    // Table Item Rows
+    currentY -= thHeight + 4;
+
+    // Table Rows
     data.items.forEach((item, idx) => {
       const isEven = idx % 2 === 0;
-      const rowHeight = 28;
+      const rowHeight = 32;
 
-      if (isEven) {
-        page.drawRectangle({
-          x: 35,
-          y: currentY - rowHeight + 8,
-          width: width - 70,
-          height: rowHeight,
-          color: surfaceGray,
+      // Row background
+      page.drawRectangle({
+        x: 35,
+        y: currentY - rowHeight,
+        width: width - 70,
+        height: rowHeight,
+        color: isEven ? surfaceGray : rgb(1, 1, 1),
+      });
+
+      // Bottom Row Divider
+      page.drawLine({
+        start: { x: 35, y: currentY - rowHeight },
+        end: { x: width - 35, y: currentY - rowHeight },
+        thickness: 0.5,
+        color: borderGray,
+      });
+
+      // Col 1: Number (#)
+      page.drawText(`${idx + 1}`, {
+        x: colPos.num + 2,
+        y: currentY - 15,
+        size: 8.5,
+        font: fontBold,
+        color: primaryBlue,
+      });
+
+      // Col 2: Medicine Name (Line 1: Name, Line 2: Dosage/Strength if present)
+      const medName = item.medicineName.length > 30 ? `${item.medicineName.substring(0, 28)}...` : item.medicineName;
+      page.drawText(medName, {
+        x: colPos.name,
+        y: currentY - 13,
+        size: 8.5,
+        font: fontBold,
+        color: textDark,
+      });
+
+      if (item.dosage) {
+        page.drawText(item.dosage, {
+          x: colPos.name,
+          y: currentY - 24,
+          size: 7.5,
+          font: fontRegular,
+          color: textMuted,
         });
       }
 
-      page.drawText(`${idx + 1}`, {
-        x: 42,
-        y: currentY - 6,
-        size: 8.5,
+      // Col 3: Frequency / Timing
+      const freqText = item.frequency || '-';
+      page.drawText(freqText.length > 20 ? `${freqText.substring(0, 18)}...` : freqText, {
+        x: colPos.freq,
+        y: currentY - 16,
+        size: 8,
         font: fontBold,
-        color: textMuted,
+        color: primaryBlue,
       });
 
-      page.drawText(`${item.medicineName} (${item.dosage})`, {
-        x: 65,
-        y: currentY - 6,
-        size: 8.5,
-        font: fontBold,
-        color: textDark,
-      });
-
-      page.drawText(`${item.frequency}`, {
-        x: 250,
-        y: currentY - 6,
+      // Col 4: Duration
+      const durText = item.duration || '-';
+      page.drawText(durText, {
+        x: colPos.dur,
+        y: currentY - 16,
         size: 8,
         font: fontRegular,
         color: textDark,
       });
 
-      page.drawText(`${item.duration}`, {
-        x: 360,
-        y: currentY - 6,
+      // Col 5: Route & Instructions
+      const routeText = item.route || 'Oral';
+      page.drawText(routeText, {
+        x: colPos.route,
+        y: currentY - 13,
         size: 8,
-        font: fontRegular,
+        font: fontBold,
         color: textDark,
       });
 
-      const instrText = `${item.route}${item.instructions ? ` - ${item.instructions}` : ''}`;
-      page.drawText(instrText.length > 25 ? instrText.substring(0, 24) + '...' : instrText, {
-        x: 435,
-        y: currentY - 6,
-        size: 7.5,
-        font: fontItalic,
-        color: textMuted,
-      });
+      if (item.instructions) {
+        const cleanInstr = item.instructions.length > 24
+          ? `${item.instructions.substring(0, 22)}...`
+          : item.instructions;
+        page.drawText(cleanInstr, {
+          x: colPos.route,
+          y: currentY - 24,
+          size: 7.5,
+          font: fontItalic,
+          color: textMuted,
+        });
+      }
 
       currentY -= rowHeight;
     });
 
+    // =========================================================================
     // 6. GENERAL ADVICE & LIFESTYLE INSTRUCTIONS
-    currentY -= 15;
-    if (data.generalAdvice) {
+    // =========================================================================
+    currentY -= 16;
+    if (data.generalAdvice && data.generalAdvice.trim()) {
       page.drawText('GENERAL ADVICE / PRECAUTIONS:', {
         x: 35,
         y: currentY,
-        size: 9,
+        size: 8.5,
         font: fontBold,
         color: primaryBlue,
       });
-      currentY -= 14;
 
+      currentY -= 10;
+
+      const adviceLines = this.wrapText(data.generalAdvice, fontRegular, 8, width - 96);
+      const adviceBoxHeight = Math.max(32, adviceLines.length * 13 + 14);
+
+      // Advice Container with Gold Left Accent Border
       page.drawRectangle({
         x: 35,
-        y: currentY - 32,
+        y: currentY - adviceBoxHeight,
         width: width - 70,
-        height: 32,
+        height: adviceBoxHeight,
         color: surfaceGray,
         borderColor: borderGray,
         borderWidth: 1,
       });
 
-      page.drawText(data.generalAdvice, {
-        x: 45,
-        y: currentY - 18,
-        size: 8,
-        font: fontRegular,
-        color: textDark,
-      });
-
-      currentY -= 45;
-    }
-
-    // 7. FOLLOW-UP APPOINTMENT
-    if (data.followUpDate) {
-      page.drawText(`Next Follow-up Review: ${data.followUpDate}`, {
+      page.drawRectangle({
         x: 35,
-        y: currentY,
-        size: 9,
-        font: fontBold,
+        y: currentY - adviceBoxHeight,
+        width: 3.5,
+        height: adviceBoxHeight,
         color: accentGold,
       });
+
+      let lineY = currentY - 14;
+      for (const line of adviceLines.slice(0, 4)) {
+        page.drawText(line, {
+          x: 48,
+          y: lineY,
+          size: 8,
+          font: fontRegular,
+          color: textDark,
+        });
+        lineY -= 12;
+      }
+
+      currentY -= adviceBoxHeight + 14;
     }
 
-    // 8. FOOTER WITH DOCTOR SIGNATURE LINE & CLINIC NOTICE
-    const footerY = 65;
+    // =========================================================================
+    // 7. NEXT FOLLOW-UP REVIEW
+    // =========================================================================
+    if (data.followUpDate) {
+      page.drawRectangle({
+        x: 35,
+        y: currentY - 22,
+        width: 250,
+        height: 22,
+        color: surfaceAlt,
+        borderColor: accentGold,
+        borderWidth: 1,
+      });
 
-    // Doctor Signature Area (Right aligned)
+      page.drawText(`Next Follow-up Review: ${data.followUpDate}`, {
+        x: 45,
+        y: currentY - 15,
+        size: 8,
+        font: fontBold,
+        color: primaryBlue,
+      });
+
+      currentY -= 30;
+    }
+
+    // =========================================================================
+    // 8. DOCTOR SIGNATURE AREA & FOOTER
+    // =========================================================================
+    const footerY = 60;
+
+    // Doctor Signature Block (Right Aligned)
+    const sigLineX1 = width - 200;
+    const sigLineX2 = width - 35;
     page.drawLine({
-      start: { x: width - 180, y: footerY + 30 },
-      end: { x: width - 35, y: footerY + 30 },
-      thickness: 1,
+      start: { x: sigLineX1, y: footerY + 36 },
+      end: { x: sigLineX2, y: footerY + 36 },
+      thickness: 0.75,
       color: textMuted,
     });
-    page.drawText(`Dr. ${data.doctorName}`, {
-      x: width - 160,
-      y: footerY + 16,
-      size: 9,
+
+    page.drawText(cleanDocName, {
+      x: sigLineX1 + 10,
+      y: footerY + 22,
+      size: 9.5,
       font: fontBold,
       color: primaryBlue,
     });
-    page.drawText('Authorized Medical Practitioner', {
-      x: width - 175,
-      y: footerY + 4,
-      size: 7,
+
+    page.drawText(data.doctorSpecialization || 'Authorized Dermatologist', {
+      x: sigLineX1 + 10,
+      y: footerY + 10,
+      size: 7.5,
       font: fontRegular,
       color: textMuted,
     });
 
-    // Bottom Notice
+    // Bottom Legal Disclaimer Banner
     page.drawRectangle({
       x: 0,
       y: 0,
       width,
-      height: 25,
+      height: 24,
       color: primaryBlue,
     });
 
     page.drawText(
-      'This prescription is generated electronically by Ewa Derma Clinic Management System. Valid without physical stamp.',
+      'This prescription is generated electronically by Ewa Derma Clinic Management System. Valid without physical signature.',
       {
-        x: 70,
+        x: 60,
         y: 8,
         size: 6.5,
         font: fontRegular,
-        color: rgb(0.9, 0.93, 0.98),
+        color: rgb(0.92, 0.95, 0.99),
       },
     );
 
