@@ -30,7 +30,6 @@ import {
   CheckCircle2,
   AlertTriangle,
   Play,
-  UserCheck,
   UserX,
   XCircle,
   Loader2,
@@ -75,7 +74,6 @@ export default function AppointmentsPage() {
     type: 'CONSULTATION',
     reason: '',
     notes: '',
-    isWalkIn: false,
   });
 
   // Action status modal
@@ -217,7 +215,6 @@ export default function AppointmentsPage() {
         type: bookForm.type,
         reason: bookForm.reason,
         notes: bookForm.notes,
-        isWalkIn: bookForm.isWalkIn,
       });
 
       const newApt = res.data.data;
@@ -313,26 +310,13 @@ export default function AppointmentsPage() {
         </div>
 
         {isReceptionOrAdmin && (
-          <div className="flex items-center gap-2">
-            <Link href="/walk-in">
-              <Button
-                variant="outline"
-                leftIcon={<UserCheck className="w-4 h-4 text-accent" />}
-              >
-                Walk-In Check-In
-              </Button>
-            </Link>
-            <Button
-              variant="primary"
-              leftIcon={<Plus className="w-4 h-4" />}
-              onClick={() => {
-                setBookForm((prev) => ({ ...prev, isWalkIn: false }));
-                setIsBookModalOpen(true);
-              }}
-            >
-              Book Appointment
-            </Button>
-          </div>
+          <Button
+            variant="primary"
+            leftIcon={<Plus className="w-4 h-4" />}
+            onClick={() => setIsBookModalOpen(true)}
+          >
+            Book Appointment
+          </Button>
         )}
       </div>
 
