@@ -153,7 +153,11 @@ export class PrescriptionsService {
     let prescription = await this.prisma.prescription.findUnique({
       where: { id },
       include: {
-        items: true,
+        items: {
+          include: {
+            medicine: true,
+          },
+        },
         patient: true,
         doctor: {
           include: {
@@ -181,7 +185,11 @@ export class PrescriptionsService {
         where: { prescriptionCode: id },
         orderBy: { version: 'desc' },
         include: {
-          items: true,
+          items: {
+            include: {
+              medicine: true,
+            },
+          },
           patient: true,
           doctor: {
             include: {

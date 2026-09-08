@@ -47,6 +47,7 @@ export default function MedicinesPage() {
     name: '',
     brand: '',
     genericName: '',
+    description: '',
     categoryId: '',
     unit: 'Tablet',
     unitPrice: 0,
@@ -121,6 +122,7 @@ export default function MedicinesPage() {
       name: med.name || '',
       brand: med.brand || '',
       genericName: med.genericName || '',
+      description: med.description || '',
       categoryId: med.categoryId || '',
       unit: med.unit || 'Tablet',
       unitPrice: Number(med.unitPrice) || 0,
@@ -148,6 +150,7 @@ export default function MedicinesPage() {
         name: editForm.name.trim(),
         brand: editForm.brand.trim() || undefined,
         genericName: editForm.genericName.trim() || undefined,
+        description: editForm.description.trim() || undefined,
         categoryId: editForm.categoryId || undefined,
         unit: editForm.unit,
         unitPrice: Number(editForm.unitPrice) || 0,
@@ -331,7 +334,14 @@ export default function MedicinesPage() {
                         isLow ? 'bg-amber-50/40' : ''
                       }`}
                     >
-                      <td className="p-3.5 font-bold text-primary">{med.name}</td>
+                      <td className="p-3.5 max-w-xs">
+                        <div className="font-bold text-primary">{med.name}</div>
+                        {med.description && (
+                          <p className="text-[11px] text-text-secondary truncate mt-0.5" title={med.description}>
+                            {med.description}
+                          </p>
+                        )}
+                      </td>
                       <td className="p-3.5">
                         <p className="font-semibold text-text-main">{med.brand || 'N/A'}</p>
                         <p className="text-[11px] text-text-secondary">{med.genericName}</p>
@@ -449,6 +459,28 @@ export default function MedicinesPage() {
                   ))}
                 </select>
               </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-semibold text-text-primary tracking-wide">
+                  Clinical Description & Dosage Note <span className="text-text-muted font-normal">(Optional)</span>
+                </label>
+                <span className={`text-[11px] ${(editForm.description?.length || 0) > 260 ? 'text-amber-600 font-semibold' : 'text-text-muted'}`}>
+                  {editForm.description?.length || 0}/280
+                </span>
+              </div>
+              <textarea
+                rows={2}
+                maxLength={280}
+                placeholder="e.g. Topical retinoid for acne vulgaris and photoaging. Apply pea-sized amount at night."
+                className="block w-full rounded-lg border border-gray-300 py-2.5 px-3 text-xs bg-white text-text-primary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                value={editForm.description}
+                onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+              />
+              <p className="text-[11px] text-text-secondary mt-1">
+                Brief note on what it treats and typical dosage (shown to staff when selecting this medicine).
+              </p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

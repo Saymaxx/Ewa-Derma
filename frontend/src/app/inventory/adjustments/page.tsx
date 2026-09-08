@@ -213,7 +213,7 @@ export default function AdjustmentsPage() {
             >
               <option value="">-- Select Medicine to Adjust --</option>
               {medList.map((m) => (
-                <option key={m.id} value={m.id}>
+                <option key={m.id} value={m.id} title={m.description || undefined}>
                   {m.name} ({m.brand || 'Generic'}) — Stock: {m.computedStock ?? 0}
                 </option>
               ))}

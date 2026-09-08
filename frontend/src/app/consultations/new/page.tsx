@@ -528,21 +528,28 @@ export default function NewConsultationPage() {
               )}
 
               {medicineSearchResults.length > 0 && (
-                <div className="absolute top-full left-0 right-0 z-20 mt-1 bg-white border border-surface-border rounded-lg shadow-lg divide-y max-h-48 overflow-y-auto">
+                <div className="absolute top-full left-0 right-0 z-20 mt-1 bg-white border border-surface-border rounded-lg shadow-lg divide-y max-h-56 overflow-y-auto">
                   {medicineSearchResults.map((m) => (
                     <button
                       key={m.id}
                       type="button"
                       onClick={() => handleAddMedicineFromSearch(m)}
-                      className="w-full p-2.5 text-left hover:bg-primary-50 transition-colors flex items-center justify-between text-xs"
+                      className="w-full p-2.5 text-left hover:bg-primary-50 transition-colors flex items-center justify-between text-xs gap-2"
                     >
-                      <div>
-                        <span className="font-bold text-text-primary">{m.name}</span>
-                        {m.genericName && (
-                          <span className="text-text-muted ml-2">({m.genericName})</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-bold text-text-primary">{m.name}</span>
+                          {m.genericName && (
+                            <span className="text-text-muted text-[11px]">({m.genericName})</span>
+                          )}
+                        </div>
+                        {m.description && (
+                          <p className="text-[11px] text-text-secondary line-clamp-1 mt-0.5" title={m.description}>
+                            {m.description}
+                          </p>
                         )}
                       </div>
-                      <span className="text-[11px] bg-primary-100 text-primary px-2 py-0.5 rounded font-medium">
+                      <span className="text-[11px] bg-primary-100 text-primary px-2 py-0.5 rounded font-medium shrink-0">
                         + Add to Rx
                       </span>
                     </button>

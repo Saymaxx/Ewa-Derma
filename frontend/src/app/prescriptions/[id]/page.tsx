@@ -319,9 +319,16 @@ export default function PrescriptionDetailPage() {
                 {prescription.items?.map((item: any, idx: number) => (
                   <div key={item.id} className="p-4 space-y-1 text-xs">
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-text-primary text-sm">
-                        {idx + 1}. {item.medicineName}
-                      </span>
+                      <div>
+                        <span className="font-bold text-text-primary text-sm">
+                          {idx + 1}. {item.medicineName}
+                        </span>
+                        {item.medicine?.description && (
+                          <p className="text-[11px] text-text-secondary line-clamp-1 mt-0.5" title={item.medicine?.description}>
+                            {item.medicine?.description}
+                          </p>
+                        )}
+                      </div>
                       <Badge variant="default" size="sm">
                         {item.route}
                       </Badge>

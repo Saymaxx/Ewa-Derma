@@ -17,6 +17,7 @@ export class MedicinesService {
         { name: { contains: q, mode: 'insensitive' } },
         { brand: { contains: q, mode: 'insensitive' } },
         { genericName: { contains: q, mode: 'insensitive' } },
+        { description: { contains: q, mode: 'insensitive' } },
       ];
     }
 
@@ -160,6 +161,7 @@ export class MedicinesService {
         name: dto.name.trim(),
         brand: dto.brand?.trim() || null,
         genericName: dto.genericName?.trim() || null,
+        description: dto.description?.trim() || null,
         categoryId: dto.categoryId || null,
         unit: dto.unit || 'Tablet',
         unitPrice: dto.unitPrice || 0,
@@ -184,6 +186,7 @@ export class MedicinesService {
         ...(dto.name !== undefined ? { name: dto.name.trim() } : {}),
         ...(dto.brand !== undefined ? { brand: dto.brand?.trim() || null } : {}),
         ...(dto.genericName !== undefined ? { genericName: dto.genericName?.trim() || null } : {}),
+        ...(dto.description !== undefined ? { description: dto.description?.trim() || null } : {}),
         ...(dto.categoryId !== undefined ? { categoryId: dto.categoryId || null } : {}),
         ...(dto.unit !== undefined ? { unit: dto.unit } : {}),
         ...(dto.unitPrice !== undefined ? { unitPrice: dto.unitPrice } : {}),

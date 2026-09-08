@@ -69,6 +69,7 @@ export default function AddNewMedicinePage() {
   const [name, setName] = useState('');
   const [brand, setBrand] = useState('');
   const [genericName, setGenericName] = useState('');
+  const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [unit, setUnit] = useState('Tube');
   const [customUnit, setCustomUnit] = useState('');
@@ -128,6 +129,7 @@ export default function AddNewMedicinePage() {
         name: name.trim(),
         brand: brand.trim() || undefined,
         genericName: genericName.trim() || undefined,
+        description: description.trim() || undefined,
         categoryId: finalCategoryId,
         unit: finalUnit,
         unitPrice: Number(unitPrice) || 0,
@@ -300,6 +302,28 @@ export default function AddNewMedicinePage() {
                     />
                   )}
                 </div>
+              </div>
+
+              <div className="md:col-span-2">
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-semibold text-text-main">
+                    Description / Clinical Indications <span className="text-text-muted font-normal">(Optional)</span>
+                  </label>
+                  <span className={`text-[11px] ${description.length > 260 ? 'text-amber-600 font-semibold' : 'text-text-muted'}`}>
+                    {description.length}/280
+                  </span>
+                </div>
+                <textarea
+                  rows={2}
+                  maxLength={280}
+                  placeholder="e.g. Topical retinoid for acne vulgaris and photoaging. Apply pea-sized amount at night."
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="w-full rounded-xl border border-surface-border bg-white p-2.5 text-xs text-text-primary focus:border-primary focus:outline-none transition-colors"
+                />
+                <p className="text-[11px] text-text-muted mt-1">
+                  Brief note on what it treats and typical dosage (shown to staff when selecting this medicine).
+                </p>
               </div>
             </div>
           </CardContent>

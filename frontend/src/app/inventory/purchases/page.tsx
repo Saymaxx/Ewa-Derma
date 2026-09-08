@@ -217,7 +217,7 @@ export default function PurchasesPage() {
               >
                 <option value="">-- Select Medicine --</option>
                 {medList.map((m) => (
-                  <option key={m.id} value={m.id}>
+                  <option key={m.id} value={m.id} title={m.description || undefined}>
                     {m.name} ({m.brand || 'Generic'})
                   </option>
                 ))}

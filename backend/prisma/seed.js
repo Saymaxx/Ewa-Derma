@@ -278,6 +278,7 @@ async function main() {
             name: 'Tretinoin 0.05% Gel',
             brand: 'Retino-A',
             genericName: 'Tretinoin',
+            description: 'Topical retinoid for acne vulgaris, hyperpigmentation, and skin cell turnover. Apply pea-sized amount at bedtime.',
             category: 'Topical Creams & Ointments',
             unit: 'Tube',
             unitPrice: 280.0,
@@ -287,6 +288,7 @@ async function main() {
             name: 'Adapalene + Benzoyl Peroxide Gel',
             brand: 'Epiduo',
             genericName: 'Adapalene 0.1% + Benzoyl Peroxide 2.5%',
+            description: 'Combination antibacterial and comedolytic gel for inflammatory acne. Apply thin layer once daily at night.',
             category: 'Topical Creams & Ointments',
             unit: 'Tube',
             unitPrice: 380.0,
@@ -296,6 +298,7 @@ async function main() {
             name: 'Doxycycline 100mg Capsule',
             brand: 'Doxicip',
             genericName: 'Doxycycline Hyclate',
+            description: 'Oral broad-spectrum tetracycline antibiotic for moderate-to-severe inflammatory acne and rosacea. 100mg once/twice daily after food.',
             category: 'Oral Antibiotics',
             unit: 'Capsule',
             unitPrice: 12.0,
@@ -305,6 +308,7 @@ async function main() {
             name: 'Itraconazole 100mg Capsule',
             brand: 'Canditral',
             genericName: 'Itraconazole',
+            description: 'Systemic triazole antifungal for dermatophytosis, tinea versicolor, and fungal nail infections. 100-200mg daily with full meals.',
             category: 'Antifungals',
             unit: 'Capsule',
             unitPrice: 28.0,
@@ -314,6 +318,7 @@ async function main() {
             name: 'Minoxidil 5% Topical Solution',
             brand: 'Mintop 5%',
             genericName: 'Minoxidil 5% w/v',
+            description: 'Vasodilator solution for androgenetic alopecia and diffuse hair thinning. Apply 1ml twice daily to dry scalp.',
             category: 'Hair Growth Serums',
             unit: 'Bottle',
             unitPrice: 650.0,
@@ -323,6 +328,7 @@ async function main() {
             name: 'Broad Spectrum Matte Sunscreen Gel SPF 50+',
             brand: 'Suncros Matte Finish',
             genericName: 'Octinoxate, Zinc Oxide, Avobenzone',
+            description: 'Non-comedogenic physical & chemical UV shield preventing photoaging and post-inflammatory erythema. Apply 20 mins before sun exposure.',
             category: 'Sun Protection',
             unit: 'Tube',
             unitPrice: 480.0,
@@ -332,6 +338,7 @@ async function main() {
             name: 'Clobetasol Propionate 0.05% Ointment',
             brand: 'Tenovate',
             genericName: 'Clobetasol Propionate',
+            description: 'Super-high potency topical corticosteroid for severe eczema, psoriasis, and resistant dermatoses. Apply sparingly for max 2 weeks.',
             category: 'Topical Creams & Ointments',
             unit: 'Tube',
             unitPrice: 110.0,
@@ -346,6 +353,7 @@ async function main() {
                     name: med.name,
                     brand: med.brand,
                     genericName: med.genericName,
+                    description: med.description,
                     categoryId: catMap.get(med.category),
                     unit: med.unit,
                     unitPrice: med.unitPrice,
@@ -353,6 +361,14 @@ async function main() {
                     minimumStock: 10,
                     gstRate: 0.0,
                     isActive: true,
+                },
+            });
+        }
+        else {
+            await prisma.medicine.update({
+                where: { id: existing.id },
+                data: {
+                    description: med.description,
                 },
             });
         }

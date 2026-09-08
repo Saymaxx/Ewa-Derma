@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, IsOptional, IsNumber, Min } from 'class-validator';
+import { IsNotEmpty, IsString, IsOptional, IsNumber, Min, MaxLength } from 'class-validator';
 
 export class CreateMedicineDto {
   @ApiProperty({ example: 'Tretinoin 0.05% Gel', description: 'Medicine brand or generic display name' })
@@ -16,6 +16,12 @@ export class CreateMedicineDto {
   @IsOptional()
   @IsString()
   genericName?: string;
+
+  @ApiProperty({ example: 'Topical retinoid for acne vulgaris and photoaging. Apply at night.', required: false, maxLength: 280 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(280, { message: 'Description cannot exceed 280 characters' })
+  description?: string;
 
   @ApiProperty({ example: 'cat-uuid-here', required: false })
   @IsOptional()

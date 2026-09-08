@@ -530,6 +530,7 @@ model Medicine {
   name         String
   brand        String?
   genericName  String?  @map("generic_name")
+  description  String?  @db.VarChar(280)
   categoryId   String?  @map("category_id")
   unit         String   @default("Tablet") // Tablet, Capsule, Bottle, Tube, Syringe
   unitPrice    Decimal  @db.Decimal(10, 2) @map("unit_price")
