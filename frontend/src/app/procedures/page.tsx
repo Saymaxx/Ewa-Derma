@@ -125,10 +125,10 @@ export default function PatientProceduresPage() {
 
     setIsSubmitting(true);
     try {
-      const res = await api.post('/appointments/procedure-visit', {
+      const res = await api.post('/appointments/walk-in-visit', {
         patientId: selectedPatient.id,
         doctorId: selectedDoctorId,
-        procedureServiceId: selectedServiceId,
+        serviceId: selectedServiceId,
         notes: procedureNotes.trim() || undefined,
       });
 

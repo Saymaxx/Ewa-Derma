@@ -124,3 +124,5 @@ export function getErrorMessage(error: any): string {
   }
   return 'Something went wrong. Please try again.';
 }
+
+export default api;

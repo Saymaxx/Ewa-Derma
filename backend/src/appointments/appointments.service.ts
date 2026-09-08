@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { EntityIdService } from '../common/services/entity-id.service';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { CreateProcedureVisitDto } from './dto/create-procedure-visit.dto';
+import { CreateWalkInVisitDto } from './dto/create-walk-in-visit.dto';
 import { UpdateAppointmentStatusDto } from './dto/update-appointment-status.dto';
 import { AppointmentStatus, AppointmentType } from '@prisma/client';
 
@@ -313,7 +314,12 @@ export class AppointmentsService {
     };
   }
 
-  async createProcedureVisit(dto: CreateProcedureVisitDto, createdByUserId?: string) {
+  async createWalkInVisit(dto: CreateWalkInVisitDto, createdByUserId?: string) {
+    const effectiveServiceId = dto.serviceId || dto.procedureServiceId;
+    if (!effectiveServiceId) {
+      throw new BadRequestException('A valid service ID is required for walk-in visit check-in');
+    }
+
     // 1. Verify Patient exists and is active
     const patient = await this.prisma.patient.findUnique({
       where: { id: dto.patientId },
@@ -333,15 +339,20 @@ export class AppointmentsService {
       throw new NotFoundException(`Doctor not found or inactive with ID: ${dto.doctorId}`);
     }
 
-    // 3. Verify Procedure Service exists and is active
+    // 3. Verify Service exists and is active (can be consultation or procedure)
     const service = await this.prisma.service.findUnique({
-      where: { id: dto.procedureServiceId },
+      where: { id: effectiveServiceId },
     });
     if (!service || !service.isActive) {
-      throw new NotFoundException(`Procedure service not found or inactive with ID: ${dto.procedureServiceId}`);
+      throw new NotFoundException(`Service not found or inactive with ID: ${effectiveServiceId}`);
     }
 
-    // 4. Time slot computation for walk-in procedure visit
+    const isConsultation =
+      service.category?.toLowerCase() === 'consultation' ||
+      service.name.toLowerCase().includes('consultation');
+    const appointmentType = isConsultation ? AppointmentType.CONSULTATION : AppointmentType.PROCEDURE;
+
+    // 4. Time slot computation for walk-in visit
     const now = new Date();
     const todayStr = now.toISOString().split('T')[0];
     const appointmentDateObj = new Date(todayStr);
@@ -411,11 +422,11 @@ export class AppointmentsService {
         appointmentCode,
         patientId: dto.patientId,
         doctorId: dto.doctorId,
-        procedureServiceId: dto.procedureServiceId,
+        procedureServiceId: effectiveServiceId,
         appointmentDate: appointmentDateObj,
         startTime,
         endTime,
-        type: AppointmentType.PROCEDURE,
+        type: appointmentType,
         status: AppointmentStatus.SCHEDULED,
         reason: service.name,
         notes: dto.notes?.trim() || null,
@@ -447,7 +458,7 @@ export class AppointmentsService {
         fromStatus: null,
         toStatus: AppointmentStatus.SCHEDULED,
         changedBy: createdByUserId || 'SYSTEM',
-        comment: `Walk-in procedure visit registered: ${service.name}`,
+        comment: `Walk-in visit registered: ${service.name}`,
       },
     });
 
@@ -497,12 +508,16 @@ export class AppointmentsService {
         fromStatus: AppointmentStatus.CONFIRMED,
         toStatus: AppointmentStatus.CHECKED_IN,
         changedBy: createdByUserId || 'SYSTEM',
-        comment: `Checked in for procedure: ${service.name}`,
+        comment: `Checked in for ${isConsultation ? 'consultation' : 'procedure'}: ${service.name}`,
       },
     });
 
-    this.logger.log(`Created & Checked In Procedure Visit: ${appointment.appointmentCode} (${service.name}) for Patient ${patient.patientCode}`);
+    this.logger.log(`Created & Checked In Walk-In Visit: ${appointment.appointmentCode} (${service.name}) for Patient ${patient.patientCode}`);
     return checkedInAppointment;
+  }
+
+  async createProcedureVisit(dto: CreateProcedureVisitDto, createdByUserId?: string) {
+    return this.createWalkInVisit(dto, createdByUserId);
   }
 
   async getProcedureServices() {

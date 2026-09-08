@@ -169,12 +169,19 @@ describe('AppointmentsService', () => {
     });
   });
 
-  describe('createProcedureVisit', () => {
-    const validProcedureDto = {
+  describe('createWalkInVisit', () => {
+    const validWalkInProcedureDto = {
       patientId: 'pt-1',
       doctorId: 'doc-1',
-      procedureServiceId: 'svc-laser-1',
+      serviceId: 'svc-laser-1',
       notes: 'Session 2 of 6',
+    };
+
+    const validWalkInConsultationDto = {
+      patientId: 'pt-1',
+      doctorId: 'doc-1',
+      serviceId: 'svc-consult-1',
+      notes: 'Acne consultation',
     };
 
     it('should create walk-in procedure visit and advance state to CHECKED_IN with full audit log', async () => {
@@ -209,14 +216,52 @@ describe('AppointmentsService', () => {
       });
       mockPrisma.appointmentStatusHistory.create.mockResolvedValue({ id: 'hist-proc' });
 
-      const result = await service.createProcedureVisit(validProcedureDto, 'reception@ewaderma.com');
+      const result = await service.createWalkInVisit(validWalkInProcedureDto, 'reception@ewaderma.com');
 
       expect(result.appointmentCode).toBe('A-3001');
       expect(result.status).toBe(AppointmentStatus.CHECKED_IN);
       expect(mockPrisma.appointmentStatusHistory.create).toHaveBeenCalledTimes(3); // SCHEDULED, CONFIRMED, CHECKED_IN
     });
 
-    it('should reject procedure visit if double booking conflict occurs', async () => {
+    it('should create walk-in consultation visit with CONSULTATION appointment type', async () => {
+      mockPrisma.patient.findUnique.mockResolvedValue({ id: 'pt-1', isActive: true, patientCode: 'P-1001' });
+      mockPrisma.doctor.findUnique.mockResolvedValue({
+        id: 'doc-1',
+        isActive: true,
+        user: { firstName: 'Sarah', lastName: 'Khan' },
+      });
+      mockPrisma.service.findUnique.mockResolvedValue({
+        id: 'svc-consult-1',
+        name: 'Initial Dermatology Consultation',
+        category: 'Consultation',
+        isActive: true,
+      });
+      mockPrisma.appointment.findFirst.mockResolvedValue(null);
+      mockEntityIdService.generateNextId.mockResolvedValue('A-3002');
+
+      const createdApt = {
+        id: 'apt-consult-1',
+        appointmentCode: 'A-3002',
+        type: AppointmentType.CONSULTATION,
+        status: AppointmentStatus.SCHEDULED,
+        procedureServiceId: 'svc-consult-1',
+      };
+
+      mockPrisma.appointment.create.mockResolvedValue(createdApt);
+      mockPrisma.appointment.update.mockResolvedValue({
+        ...createdApt,
+        status: AppointmentStatus.CHECKED_IN,
+        checkedInAt: new Date(),
+      });
+      mockPrisma.appointmentStatusHistory.create.mockResolvedValue({ id: 'hist-consult' });
+
+      const result = await service.createWalkInVisit(validWalkInConsultationDto, 'reception@ewaderma.com');
+
+      expect(result.appointmentCode).toBe('A-3002');
+      expect(result.status).toBe(AppointmentStatus.CHECKED_IN);
+    });
+
+    it('should reject walk-in visit if double booking conflict occurs', async () => {
       mockPrisma.patient.findUnique.mockResolvedValue({ id: 'pt-1', isActive: true });
       mockPrisma.doctor.findUnique.mockResolvedValue({
         id: 'doc-1',
@@ -226,12 +271,12 @@ describe('AppointmentsService', () => {
       mockPrisma.service.findUnique.mockResolvedValue({ id: 'svc-laser-1', isActive: true, name: 'Laser' });
       mockPrisma.appointment.findFirst.mockResolvedValue({ id: 'apt-busy' });
 
-      await expect(service.createProcedureVisit(validProcedureDto, 'reception@ewaderma.com')).rejects.toThrow(
+      await expect(service.createWalkInVisit(validWalkInProcedureDto, 'reception@ewaderma.com')).rejects.toThrow(
         ConflictException,
       );
     });
 
-    it('should reject procedure visit if procedure service is not found', async () => {
+    it('should reject walk-in visit if service is not found', async () => {
       mockPrisma.patient.findUnique.mockResolvedValue({ id: 'pt-1', isActive: true });
       mockPrisma.doctor.findUnique.mockResolvedValue({
         id: 'doc-1',
@@ -240,7 +285,7 @@ describe('AppointmentsService', () => {
       });
       mockPrisma.service.findUnique.mockResolvedValue(null);
 
-      await expect(service.createProcedureVisit(validProcedureDto, 'reception@ewaderma.com')).rejects.toThrow(
+      await expect(service.createWalkInVisit(validWalkInProcedureDto, 'reception@ewaderma.com')).rejects.toThrow(
         NotFoundException,
       );
     });

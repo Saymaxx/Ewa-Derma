@@ -11,6 +11,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@ne
 import { AppointmentsService } from './appointments.service';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { CreateProcedureVisitDto } from './dto/create-procedure-visit.dto';
+import { CreateWalkInVisitDto } from './dto/create-walk-in-visit.dto';
 import { UpdateAppointmentStatusDto } from './dto/update-appointment-status.dto';
 import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser, AuthenticatedUser } from '../common/decorators/current-user.decorator';
@@ -35,9 +36,22 @@ export class AppointmentsController {
     return this.appointmentsService.create(createAppointmentDto, user.email || user.id);
   }
 
+  @Post('walk-in-visit')
+  @Roles(RoleName.ADMIN, RoleName.RECEPTIONIST)
+  @ApiOperation({ summary: 'Fast-track walk-in visit creation (consultation or procedure) and instant queue check-in' })
+  @ApiResponse({ status: 201, description: 'Walk-in visit created and placed directly into live checked-in queue' })
+  @ApiResponse({ status: 409, description: 'Conflict - Doctor already booked for an overlapping slot' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  async createWalkInVisit(
+    @Body() dto: CreateWalkInVisitDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.appointmentsService.createWalkInVisit(dto, user.email || user.id);
+  }
+
   @Post('procedure-visit')
   @Roles(RoleName.ADMIN, RoleName.RECEPTIONIST)
-  @ApiOperation({ summary: 'Fast-track walk-in procedure visit creation and instant queue check-in' })
+  @ApiOperation({ summary: 'Legacy alias for fast-track walk-in procedure visit creation and instant queue check-in' })
   @ApiResponse({ status: 201, description: 'Procedure visit created and placed directly into live checked-in queue' })
   @ApiResponse({ status: 409, description: 'Conflict - Doctor already booked for an overlapping slot' })
   @ApiResponse({ status: 403, description: 'Forbidden' })
@@ -45,7 +59,7 @@ export class AppointmentsController {
     @Body() dto: CreateProcedureVisitDto,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.appointmentsService.createProcedureVisit(dto, user.email || user.id);
+    return this.appointmentsService.createWalkInVisit(dto, user.email || user.id);
   }
 
   @Get('procedure-services')

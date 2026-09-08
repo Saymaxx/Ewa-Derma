@@ -115,4 +115,36 @@ describe('CreatePatientDto Validation', () => {
     expect(errors[0].property).toBe('phone');
     expect(errors[0].constraints?.matches).toBe('Please provide a valid phone number');
   });
+
+  it('should pass validation for minimal quick patient registration (name + phone only)', async () => {
+    const rawData = {
+      firstName: 'Kabir',
+      lastName: 'Mehta',
+      phone: '9812345678',
+    };
+
+    const { instance, errors } = await transformAndValidate(rawData);
+
+    expect(errors).toHaveLength(0);
+    expect(instance.firstName).toBe('Kabir');
+    expect(instance.lastName).toBe('Mehta');
+    expect(instance.phone).toBe('9812345678');
+  });
+
+  it('should pass validation for minimal quick patient registration with optional gender', async () => {
+    const rawData = {
+      firstName: 'Ananya',
+      lastName: 'Roy',
+      phone: '9876543210',
+      gender: Gender.FEMALE,
+    };
+
+    const { instance, errors } = await transformAndValidate(rawData);
+
+    expect(errors).toHaveLength(0);
+    expect(instance.firstName).toBe('Ananya');
+    expect(instance.lastName).toBe('Roy');
+    expect(instance.phone).toBe('9876543210');
+    expect(instance.gender).toBe(Gender.FEMALE);
+  });
 });

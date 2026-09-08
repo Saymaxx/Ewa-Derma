@@ -314,16 +314,14 @@ export default function AppointmentsPage() {
 
         {isReceptionOrAdmin && (
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              leftIcon={<UserCheck className="w-4 h-4 text-accent" />}
-              onClick={() => {
-                setBookForm((prev) => ({ ...prev, isWalkIn: true }));
-                setIsBookModalOpen(true);
-              }}
-            >
-              Walk-in Check-In
-            </Button>
+            <Link href="/walk-in">
+              <Button
+                variant="outline"
+                leftIcon={<UserCheck className="w-4 h-4 text-accent" />}
+              >
+                Walk-In Check-In
+              </Button>
+            </Link>
             <Button
               variant="primary"
               leftIcon={<Plus className="w-4 h-4" />}
@@ -542,12 +540,12 @@ export default function AppointmentsPage() {
         </CardContent>
       </Card>
 
-      {/* Book Appointment / Walk-in Modal */}
+      {/* Book Appointment Modal */}
       <Modal
         isOpen={isBookModalOpen}
         onClose={() => setIsBookModalOpen(false)}
-        title={bookForm.isWalkIn ? 'Walk-in Immediate Check-In' : 'Book Appointment'}
-        description="Select patient, doctor, date, and 30-minute time slot."
+        title="Book Appointment"
+        description="Select patient, doctor, date, and 30-minute time slot for scheduled visit."
         maxWidth="lg"
       >
         <form onSubmit={handleBookAppointment} className="space-y-4">
@@ -704,7 +702,7 @@ export default function AppointmentsPage() {
               variant="primary"
               isLoading={isSubmitting}
             >
-              {bookForm.isWalkIn ? 'Check In Walk-in' : 'Confirm Booking'}
+              Confirm Booking
             </Button>
           </div>
         </form>

@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   Users,
   Calendar,
+  UserCheck,
   Stethoscope,
   CreditCard,
   Package,
@@ -51,6 +52,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
       icon: <LayoutDashboard className="w-5 h-5" />,
     },
     // Receptionist / Shared Patient & Appointment items
+    {
+      label: 'Walk-In Visit',
+      href: '/walk-in',
+      icon: <UserCheck className="w-5 h-5" />,
+      roles: ['ADMIN', 'RECEPTIONIST'],
+    },
     {
       label: 'Patients',
       href: '/patients',
