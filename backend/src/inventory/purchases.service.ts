@@ -40,12 +40,27 @@ export class PurchasesService {
       throw new NotFoundException(`Medicine not found with ID: ${dto.medicineId}`);
     }
 
-    if (dto.supplierId) {
-      const supplier = await this.prisma.supplier.findUnique({
-        where: { id: dto.supplierId },
+    let supplierId = dto.supplierId || null;
+    if (!supplierId && dto.supplierName && dto.supplierName.trim()) {
+      const cleanName = dto.supplierName.trim();
+      let supplier = await this.prisma.supplier.findFirst({
+        where: { name: { equals: cleanName, mode: 'insensitive' } },
       });
       if (!supplier) {
-        throw new NotFoundException(`Supplier not found with ID: ${dto.supplierId}`);
+        supplier = await this.prisma.supplier.create({
+          data: {
+            name: cleanName,
+            phone: 'N/A',
+          },
+        });
+      }
+      supplierId = supplier.id;
+    } else if (supplierId) {
+      const supplier = await this.prisma.supplier.findUnique({
+        where: { id: supplierId },
+      });
+      if (!supplier) {
+        throw new NotFoundException(`Supplier not found with ID: ${supplierId}`);
       }
     }
 
@@ -64,7 +79,7 @@ export class PurchasesService {
         batch = await tx.medicineBatch.create({
           data: {
             medicineId: dto.medicineId,
-            supplierId: dto.supplierId || null,
+            supplierId: supplierId || null,
             batchNumber: dto.batchNumber.trim(),
             expiryDate: new Date(dto.expiryDate),
             purchasePrice: dto.purchasePrice,

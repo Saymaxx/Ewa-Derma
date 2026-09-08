@@ -151,7 +151,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
         </div>
         <nav className="space-y-1">
           {filteredNavItems.map((item) => {
-            const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href) && item.href !== '#');
+            const isActive =
+              pathname === item.href ||
+              (item.href !== '/dashboard' &&
+                item.href !== '#' &&
+                pathname.startsWith(item.href + '/') &&
+                !filteredNavItems.some(
+                  (other) =>
+                    other.href !== item.href &&
+                    (pathname === other.href || pathname.startsWith(other.href + '/'))
+                ));
             const isClickable = item.href !== '#';
 
             if (!isClickable) {

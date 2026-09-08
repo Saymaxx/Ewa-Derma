@@ -200,8 +200,40 @@ export class MedicinesService {
   }
 
   async getCategories() {
-    return this.prisma.medicineCategory.findMany({
+    const defaultCategories = [
+      'Topical Creams & Ointments',
+      'Oral Antibiotics',
+      'Antifungals',
+      'Hair Growth Serums',
+      'Sun Protection',
+      'Facewash',
+      'Cleanser',
+      'Moisturizer',
+      'Anti-histamine',
+      'Anti-viral',
+      'Tablets',
+      'Capsules',
+      'Mask',
+      'Shampoo',
+    ];
+
+    const existing = await this.prisma.medicineCategory.findMany({
       orderBy: { name: 'asc' },
     });
+
+    const existingNames = new Set(existing.map((c) => c.name.toLowerCase()));
+    const missing = defaultCategories.filter((cat) => !existingNames.has(cat.toLowerCase()));
+
+    if (missing.length > 0) {
+      await this.prisma.medicineCategory.createMany({
+        data: missing.map((name) => ({ name })),
+        skipDuplicates: true,
+      });
+      return this.prisma.medicineCategory.findMany({
+        orderBy: { name: 'asc' },
+      });
+    }
+
+    return existing;
   }
 }

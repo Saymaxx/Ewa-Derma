@@ -8,6 +8,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { StatGridSkeleton } from '@/components/ui/Skeleton';
+import { PharmacyDashboard } from '@/components/dashboard/PharmacyDashboard';
 import {
   Building2,
   Phone,
@@ -89,49 +90,9 @@ export default function DashboardPage() {
   const isAdmin = hasRole(['ADMIN']);
   const isInventoryManager = hasRole(['INVENTORY_MANAGER']) && !hasRole(['ADMIN', 'RECEPTIONIST']);
 
-  // If user is Pharmacy Manager (and not Admin/Receptionist), render clean Pharmacy workspace
+  // If user is Pharmacy Manager (and not Admin/Receptionist), render full Pharmacy Analytics Dashboard
   if (isInventoryManager) {
-    return (
-      <div className="space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-purple-900 via-purple-800 to-purple-950 p-6 rounded-2xl text-white shadow-md relative overflow-hidden">
-          <div className="space-y-1 z-10">
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold font-serif tracking-tight">
-                Welcome, {user?.firstName} {user?.lastName}
-              </h1>
-              <span className="bg-amber-400/20 border border-amber-400 text-amber-300 px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider">
-                Pharmacy Manager
-              </span>
-            </div>
-            <p className="text-purple-200 text-sm max-w-xl">
-              Ewa Derma Clinic Management System • Lucknow Branch
-            </p>
-          </div>
-          <div className="absolute -right-12 -bottom-12 w-48 h-48 rounded-full bg-amber-400/10 blur-2xl pointer-events-none" />
-        </div>
-
-        <Card className="border-purple-200 shadow-sm">
-          <CardContent className="p-8 text-center space-y-4">
-            <div className="w-16 h-16 rounded-full bg-purple-50 text-purple-600 border border-purple-200 flex items-center justify-center mx-auto">
-              <Package className="w-8 h-8" />
-            </div>
-            <div className="space-y-1 max-w-md mx-auto">
-              <h3 className="text-lg font-bold text-text-primary">
-                Pharmacy & Inventory Management
-              </h3>
-              <p className="text-xs text-text-secondary leading-relaxed">
-                You are logged in with the <strong>Pharmacy Manager</strong> role. Access medicine stock catalog, batch expiry tracking, and inventory restocking controls.
-              </p>
-            </div>
-            <div className="pt-2">
-              <Badge variant="accent" size="md">
-                Pharmacy Module Active
-              </Badge>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    return <PharmacyDashboard user={user} />;
   }
 
   // -------------------------------------------------------------

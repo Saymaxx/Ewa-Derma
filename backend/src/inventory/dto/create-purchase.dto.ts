@@ -12,6 +12,11 @@ export class CreatePurchaseDto {
   @IsString()
   supplierId?: string;
 
+  @ApiPropertyOptional({ description: 'Supplier / Vendor Name (Text)', example: 'Cipla Healthcare' })
+  @IsOptional()
+  @IsString()
+  supplierName?: string;
+
   @ApiProperty({ description: 'Batch Number', example: 'BATCH-2026-09' })
   @IsNotEmpty()
   @IsString()

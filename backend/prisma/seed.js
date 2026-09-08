@@ -248,7 +248,22 @@ async function main() {
     }
     // 7. Seed Sample Medicine Categories & Medicines
     console.log('Seeding medicine categories & dermatology formulary...');
-    const categories = ['Topical Creams & Ointments', 'Oral Antibiotics', 'Antifungals', 'Hair Growth Serums', 'Sun Protection'];
+    const categories = [
+        'Topical Creams & Ointments',
+        'Oral Antibiotics',
+        'Antifungals',
+        'Hair Growth Serums',
+        'Sun Protection',
+        'Facewash',
+        'Cleanser',
+        'Moisturizer',
+        'Anti-histamine',
+        'Anti-viral',
+        'Tablets',
+        'Capsules',
+        'Mask',
+        'Shampoo',
+    ];
     const catMap = new Map();
     for (const name of categories) {
         const cat = await prisma.medicineCategory.upsert({

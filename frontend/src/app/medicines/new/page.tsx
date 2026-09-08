@@ -39,13 +39,29 @@ const COMMON_UNITS = [
   'Pump Dispenser',
 ];
 
+const DEFAULT_DERMA_CATEGORIES = [
+  'Topical Creams & Ointments',
+  'Oral Antibiotics',
+  'Antifungals',
+  'Hair Growth Serums',
+  'Sun Protection',
+  'Facewash',
+  'Cleanser',
+  'Moisturizer',
+  'Anti-histamine',
+  'Anti-viral',
+  'Tablets',
+  'Capsules',
+  'Mask',
+  'Shampoo',
+];
+
 export default function AddNewMedicinePage() {
   const { showToast } = useToast();
   const router = useRouter();
 
   // Category State
   const [categories, setCategories] = useState<any[]>([]);
-  const [suppliers, setSuppliers] = useState<any[]>([]);
   const [isLoadingMeta, setIsLoadingMeta] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -62,33 +78,35 @@ export default function AddNewMedicinePage() {
   const [minimumStock, setMinimumStock] = useState<number>(10);
   const [gstRate, setGstRate] = useState<number>(12);
 
-  // Initial Stock Batch Option
-  const [hasInitialStock, setHasInitialStock] = useState(false);
-  const [initialSupplierId, setInitialSupplierId] = useState('');
+  // Initial Stock Batch Fields
+  const [initialSupplierName, setInitialSupplierName] = useState('');
   const [initialBatchNo, setInitialBatchNo] = useState('');
-  const [initialQuantity, setInitialQuantity] = useState<number>(50);
+  const [initialQuantity, setInitialQuantity] = useState<string>('');
   const [initialExpiryDate, setInitialExpiryDate] = useState('2028-06-30');
   const [initialRefNo, setInitialRefNo] = useState('');
 
   useEffect(() => {
     const fetchMetadata = async () => {
       try {
-        const [catRes, supRes] = await Promise.all([
-          api.get('/medicines/categories').catch(() => ({ data: { data: [] } })),
-          api.get('/suppliers').catch(() => ({ data: { data: [] } })),
-        ]);
+        const catRes = await api.get('/medicines/categories').catch(() => ({ data: { data: [] } }));
         const catData = catRes?.data?.data ?? catRes?.data;
-        const supData = supRes?.data?.data ?? supRes?.data;
-        setCategories(Array.isArray(catData) ? catData : []);
-        setSuppliers(Array.isArray(supData) ? supData : []);
+        const fetchedCats = Array.isArray(catData) ? catData : [];
+        
+        // Ensure all default categories are present in the list
+        const existingNames = new Set(fetchedCats.map((c: any) => c.name.toLowerCase()));
+        const syntheticDefaults = DEFAULT_DERMA_CATEGORIES
+          .filter((name) => !existingNames.has(name.toLowerCase()))
+          .map((name) => ({ id: name, name }));
+
+        setCategories([...fetchedCats, ...syntheticDefaults]);
       } catch (err) {
-        showToast('Notice: Could not load categories list', 'info');
+        setCategories(DEFAULT_DERMA_CATEGORIES.map((name) => ({ id: name, name })));
       } finally {
         setIsLoadingMeta(false);
       }
     };
     fetchMetadata();
-  }, [showToast]);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,21 +115,20 @@ export default function AddNewMedicinePage() {
       return;
     }
 
-    if (hasInitialStock && (!initialBatchNo.trim() || initialQuantity <= 0)) {
-      showToast('Please provide a valid Batch Number and Quantity for the initial stock', 'error');
-      return;
-    }
-
     setIsSubmitting(true);
     try {
       const finalUnit = unit === 'OTHER' ? customUnit.trim() || 'Unit' : unit;
+
+      // Match category ID: if categoryId matches a UUID, send it; if it's name-only or valid, find from list
+      const matchedCat = categories.find((c) => c.id === categoryId || c.name === categoryId);
+      const finalCategoryId = matchedCat?.id && matchedCat.id.length > 20 ? matchedCat.id : undefined;
 
       // 1. Create the Master Medicine
       const createRes = await api.post('/medicines', {
         name: name.trim(),
         brand: brand.trim() || undefined,
         genericName: genericName.trim() || undefined,
-        categoryId: categoryId || undefined,
+        categoryId: finalCategoryId,
         unit: finalUnit,
         unitPrice: Number(unitPrice) || 0,
         mrp: Number(mrp) || Number(unitPrice) || 0,
@@ -123,17 +140,19 @@ export default function AddNewMedicinePage() {
       const newMedicine = createRes?.data?.data;
       const medicineId = newMedicine?.id;
 
-      // 2. If Initial Stock checked, create initial purchase entry
-      if (hasInitialStock && medicineId) {
+      // 2. If Opening Quantity is provided (> 0), record the inward batch
+      const qty = parseInt(initialQuantity, 10);
+      if (qty > 0 && medicineId) {
+        const batchNo = initialBatchNo.trim() || `BATCH-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
         await api.post('/inventory/purchases', {
           medicineId,
-          supplierId: initialSupplierId || undefined,
-          batchNumber: initialBatchNo.trim(),
-          quantity: Number(initialQuantity),
+          supplierName: initialSupplierName.trim() || undefined,
+          batchNumber: batchNo,
+          quantity: qty,
           purchasePrice: Number(purchasePrice) || 0,
-          expiryDate: initialExpiryDate,
-          referenceNumber: initialRefNo.trim() || 'INITIAL-STOCK',
-          notes: 'Initial opening stock registered during medicine master onboarding',
+          expiryDate: initialExpiryDate || '2028-12-31',
+          referenceNumber: initialRefNo.trim() || 'OPENING-STOCK',
+          notes: 'Initial opening stock registered during medicine catalog entry',
         });
       }
 
@@ -147,7 +166,6 @@ export default function AddNewMedicinePage() {
   };
 
   const categoryList = Array.isArray(categories) ? categories : [];
-  const supplierList = Array.isArray(suppliers) ? suppliers : [];
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto pb-12">
@@ -384,107 +402,87 @@ export default function AddNewMedicinePage() {
           </CardContent>
         </Card>
 
-        {/* 3. Optional Opening Stock Inward Batch */}
-        <Card className={hasInitialStock ? 'border-primary/40 bg-purple-50/20' : ''}>
-          <CardHeader className="pb-3 border-b border-surface-border flex flex-row items-center justify-between">
+        {/* 3. Inward Opening Stock Batch */}
+        <Card>
+          <CardHeader className="pb-3 border-b border-surface-border">
             <CardTitle className="text-sm font-bold flex items-center gap-2 text-primary">
               <Layers className="w-4 h-4 text-accent" />
-              3. Inward Opening Stock Batch (Optional)
+              3. Inward Opening Stock Batch
             </CardTitle>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={hasInitialStock}
-                onChange={(e) => setHasInitialStock(e.target.checked)}
-                className="w-4 h-4 text-primary rounded border-gray-300 focus:ring-primary"
-              />
-              <span className="text-xs font-semibold text-text-main">
-                Log initial stock batch now
-              </span>
-            </label>
           </CardHeader>
 
-          {hasInitialStock && (
-            <CardContent className="p-6 space-y-4">
-              <p className="text-xs text-text-secondary">
-                Directly creates the first active FEFO batch for this medicine so it becomes immediately dispensable.
-              </p>
+          <CardContent className="p-6 space-y-4">
+            <p className="text-xs text-text-secondary">
+              Logs the initial active FEFO batch for this medicine into stock ledger so it becomes immediately dispensable.
+            </p>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs font-semibold text-text-main block mb-1">
-                    Initial Batch Number <span className="text-red-500">*</span>
-                  </label>
-                  <Input
-                    type="text"
-                    placeholder="e.g. BATCH-2026-001"
-                    value={initialBatchNo}
-                    onChange={(e) => setInitialBatchNo(e.target.value)}
-                    className="text-xs font-mono"
-                    required={hasInitialStock}
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs font-semibold text-text-main block mb-1">
-                    Opening Quantity (Units) <span className="text-red-500">*</span>
-                  </label>
-                  <Input
-                    type="number"
-                    min="1"
-                    value={initialQuantity}
-                    onChange={(e) => setInitialQuantity(parseInt(e.target.value) || 1)}
-                    className="text-xs font-bold"
-                    required={hasInitialStock}
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs font-semibold text-text-main block mb-1">
-                    Batch Expiry Date (FEFO) <span className="text-red-500">*</span>
-                  </label>
-                  <Input
-                    type="date"
-                    value={initialExpiryDate}
-                    onChange={(e) => setInitialExpiryDate(e.target.value)}
-                    className="text-xs"
-                    required={hasInitialStock}
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs font-semibold text-text-main block mb-1">
-                    Vendor / Supplier
-                  </label>
-                  <select
-                    value={initialSupplierId}
-                    onChange={(e) => setInitialSupplierId(e.target.value)}
-                    className="w-full h-9 rounded-xl border border-surface-border bg-white px-3 text-xs focus:border-primary focus:outline-none"
-                  >
-                    <option value="">-- General / Default Supplier --</option>
-                    {supplierList.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="text-xs font-semibold text-text-main block mb-1">
-                    Invoice / PO Reference Number
-                  </label>
-                  <Input
-                    type="text"
-                    placeholder="e.g. INV-INIT-2026"
-                    value={initialRefNo}
-                    onChange={(e) => setInitialRefNo(e.target.value)}
-                    className="text-xs"
-                  />
-                </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-semibold text-text-main block mb-1">
+                  Initial Batch Number
+                </label>
+                <Input
+                  type="text"
+                  placeholder="e.g. BATCH-2026-001 (optional)"
+                  value={initialBatchNo}
+                  onChange={(e) => setInitialBatchNo(e.target.value)}
+                  className="text-xs font-mono"
+                />
               </div>
-            </CardContent>
-          )}
+
+              <div>
+                <label className="text-xs font-semibold text-text-main block mb-1">
+                  Opening Quantity (Units)
+                </label>
+                <Input
+                  type="number"
+                  min="0"
+                  placeholder="e.g. 50 (leave blank if 0)"
+                  value={initialQuantity}
+                  onChange={(e) => setInitialQuantity(e.target.value)}
+                  className="text-xs font-bold"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-text-main block mb-1">
+                  Batch Expiry Date (FEFO)
+                </label>
+                <Input
+                  type="date"
+                  value={initialExpiryDate}
+                  onChange={(e) => setInitialExpiryDate(e.target.value)}
+                  className="text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-text-main block mb-1">
+                  Vendor / Supplier
+                </label>
+                <Input
+                  type="text"
+                  placeholder="e.g. Cipla, Sun Pharma, Abbott Healthcare"
+                  value={initialSupplierName}
+                  onChange={(e) => setInitialSupplierName(e.target.value)}
+                  className="text-xs"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="text-xs font-semibold text-text-main block mb-1">
+                  Invoice / PO Reference Number
+                </label>
+                <Input
+                  type="text"
+                  placeholder="e.g. INV-INIT-2026"
+                  value={initialRefNo}
+                  onChange={(e) => setInitialRefNo(e.target.value)}
+                  className="text-xs"
+                />
+              </div>
+            </div>
+          </CardContent>
         </Card>
 
         {/* Submit Actions */}
