@@ -1,11 +1,36 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, IsOptional, IsNumber, IsBoolean, Min } from 'class-validator';
+import { IsNotEmpty, IsString, IsOptional, IsNumber, Min, IsEmail } from 'class-validator';
 
 export class CreateDoctorDto {
-  @ApiProperty({ example: 'usr-uuid-here', description: 'User ID associated with the doctor' })
-  @IsNotEmpty()
+  @ApiProperty({ example: 'usr-uuid-here', description: 'User ID associated with the doctor (optional if creating user inline)', required: false })
+  @IsOptional()
   @IsString()
-  userId: string;
+  userId?: string;
+
+  @ApiProperty({ example: 'Dr. Rahul', description: 'First Name (required if userId not provided)', required: false })
+  @IsOptional()
+  @IsString()
+  firstName?: string;
+
+  @ApiProperty({ example: 'Sharma', description: 'Last Name (required if userId not provided)', required: false })
+  @IsOptional()
+  @IsString()
+  lastName?: string;
+
+  @ApiProperty({ example: 'dr.rahul@ewaderma.com', description: 'Doctor Email', required: false })
+  @IsOptional()
+  @IsEmail()
+  email?: string;
+
+  @ApiProperty({ example: '+91 98765 43210', description: 'Doctor Contact Phone', required: false })
+  @IsOptional()
+  @IsString()
+  phone?: string;
+
+  @ApiProperty({ example: 'Doctor@123', description: 'Initial login password', required: false })
+  @IsOptional()
+  @IsString()
+  password?: string;
 
   @ApiProperty({ example: 'Dermatologist', description: 'Medical Specialization' })
   @IsNotEmpty()
@@ -38,3 +63,4 @@ export class CreateDoctorDto {
   @IsString()
   workingHours?: string;
 }
+

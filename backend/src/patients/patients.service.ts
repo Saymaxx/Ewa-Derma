@@ -224,4 +224,19 @@ export class PatientsService {
       },
     });
   }
+
+  async remove(id: string) {
+    const existing = await this.prisma.patient.findUnique({
+      where: { id },
+    });
+    if (!existing) {
+      throw new NotFoundException(`Patient not found with ID: ${id}`);
+    }
+
+    // Deactivate patient (preserving clinical history records)
+    return this.prisma.patient.update({
+      where: { id },
+      data: { isActive: false },
+    });
+  }
 }

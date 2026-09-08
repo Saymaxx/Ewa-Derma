@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { api } from '@/lib/api';
+import { api, getErrorMessage } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import { useToast } from '@/components/ui/Toast';
 import { Button } from '@/components/ui/Button';
@@ -30,6 +30,9 @@ import {
   CalendarPlus,
   Loader2,
   FileText,
+  Edit2,
+  Trash2,
+  AlertTriangle,
 } from 'lucide-react';
 import { useDebouncedValue } from '@/lib/useDebouncedValue';
 
@@ -43,10 +46,20 @@ export default function PatientsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedQuery = useDebouncedValue(searchQuery, 300);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Register Modal State
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Form State
+  // Edit Modal State
+  const [editPatient, setEditPatient] = useState<any | null>(null);
+  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
+
+  // Delete Modal State
+  const [deletePatient, setDeletePatient] = useState<any | null>(null);
+  const [isDeleteSubmitting, setIsDeleteSubmitting] = useState(false);
+
+  // Register Form State
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -58,6 +71,23 @@ export default function PatientsPage() {
     address: '',
     city: 'Lucknow',
     state: 'Uttar Pradesh',
+    emergencyContact: '',
+    medicalHistory: '',
+    allergies: '',
+  });
+
+  // Edit Form State
+  const [editFormData, setEditFormData] = useState({
+    firstName: '',
+    lastName: '',
+    phone: '',
+    email: '',
+    dateOfBirth: '',
+    gender: 'NOT_SPECIFIED',
+    bloodGroup: 'UNKNOWN',
+    address: '',
+    city: '',
+    state: '',
     emergencyContact: '',
     medicalHistory: '',
     allergies: '',
@@ -142,14 +172,89 @@ export default function PatientsPage() {
       });
       fetchPatients(searchQuery);
     } catch (err: any) {
-      const msg = err.response?.data?.error?.message || 'Failed to register patient';
+      const msg = getErrorMessage(err);
       showToast(msg, 'error', 'Registration Error');
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const openEditModal = (pt: any) => {
+    setEditPatient(pt);
+    setEditFormData({
+      firstName: pt.firstName || '',
+      lastName: pt.lastName || '',
+      phone: pt.phone || '',
+      email: pt.email || '',
+      dateOfBirth: pt.dateOfBirth ? pt.dateOfBirth.split('T')[0] : '',
+      gender: pt.gender || 'NOT_SPECIFIED',
+      bloodGroup: pt.bloodGroup || 'UNKNOWN',
+      address: pt.address || '',
+      city: pt.city || '',
+      state: pt.state || '',
+      emergencyContact: pt.emergencyContact || '',
+      medicalHistory: pt.medicalHistory || '',
+      allergies: pt.allergies || '',
+    });
+  };
+
+  const handleUpdatePatient = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editPatient) return;
+
+    if (!editFormData.firstName.trim() || !editFormData.lastName.trim() || !editFormData.phone.trim()) {
+      showToast('First name, last name, and phone number are required', 'warning', 'Missing Fields');
+      return;
+    }
+
+    setIsEditSubmitting(true);
+    try {
+      const payload = {
+        firstName: editFormData.firstName.trim(),
+        lastName: editFormData.lastName.trim(),
+        phone: editFormData.phone.trim(),
+        email: editFormData.email.trim() ? editFormData.email.trim() : null,
+        dateOfBirth: editFormData.dateOfBirth ? editFormData.dateOfBirth : null,
+        gender: editFormData.gender,
+        bloodGroup: editFormData.bloodGroup,
+        address: editFormData.address.trim() ? editFormData.address.trim() : null,
+        city: editFormData.city.trim() ? editFormData.city.trim() : null,
+        state: editFormData.state.trim() ? editFormData.state.trim() : null,
+        emergencyContact: editFormData.emergencyContact.trim() ? editFormData.emergencyContact.trim() : null,
+        medicalHistory: editFormData.medicalHistory.trim() ? editFormData.medicalHistory.trim() : null,
+        allergies: editFormData.allergies.trim() ? editFormData.allergies.trim() : null,
+      };
+
+      await api.patch(`/patients/${editPatient.id}`, payload);
+      showToast(`Patient ${editPatient.patientCode} updated successfully.`, 'success', 'Profile Updated');
+      setEditPatient(null);
+      fetchPatients(searchQuery);
+    } catch (err: any) {
+      const msg = getErrorMessage(err);
+      showToast(msg, 'error', 'Update Failed');
+    } finally {
+      setIsEditSubmitting(false);
+    }
+  };
+
+  const handleDeletePatient = async () => {
+    if (!deletePatient) return;
+    setIsDeleteSubmitting(true);
+    try {
+      await api.delete(`/patients/${deletePatient.id}`);
+      showToast(`Patient ${deletePatient.patientCode} (${deletePatient.firstName} ${deletePatient.lastName}) has been removed.`, 'success', 'Patient Deleted');
+      setDeletePatient(null);
+      fetchPatients(searchQuery);
+    } catch (err: any) {
+      const msg = getErrorMessage(err);
+      showToast(msg, 'error', 'Delete Failed');
+    } finally {
+      setIsDeleteSubmitting(false);
+    }
+  };
+
   const isReceptionOrAdmin = hasRole(['ADMIN', 'RECEPTIONIST']);
+  const isAdmin = hasRole('ADMIN');
 
   return (
     <div className="space-y-6">
@@ -163,7 +268,7 @@ export default function PatientsPage() {
             </h1>
           </div>
           <p className="text-sm text-text-secondary mt-1">
-            Search, register, and manage patient profiles and visit histories.
+            Search, register, edit, and manage patient profiles and visit histories.
           </p>
         </div>
 
@@ -295,9 +400,30 @@ export default function PatientsPage() {
                       <div className="flex items-center justify-end gap-1.5">
                         <Link href={`/patients/${pt.id}`}>
                           <Button size="sm" variant="outline" leftIcon={<Eye className="w-3.5 h-3.5" />}>
-                            Profile
+                            View
                           </Button>
                         </Link>
+                        {isReceptionOrAdmin && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            leftIcon={<Edit2 className="w-3.5 h-3.5 text-blue-600" />}
+                            onClick={() => openEditModal(pt)}
+                          >
+                            Edit
+                          </Button>
+                        )}
+                        {isAdmin && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-status-danger hover:bg-status-danger/10"
+                            leftIcon={<Trash2 className="w-3.5 h-3.5 text-status-danger" />}
+                            onClick={() => setDeletePatient(pt)}
+                          >
+                            Delete
+                          </Button>
+                        )}
                         {isReceptionOrAdmin && (
                           <Link href={`/appointments?patientId=${pt.id}`}>
                             <Button size="sm" variant="ghost" leftIcon={<CalendarPlus className="w-3.5 h-3.5 text-primary" />}>
@@ -452,6 +578,187 @@ export default function PatientsPage() {
           </div>
         </form>
       </Modal>
+
+      {/* Edit Patient Modal */}
+      <Modal
+        isOpen={!!editPatient}
+        onClose={() => setEditPatient(null)}
+        title={`Edit Patient Details — ${editPatient?.patientCode}`}
+        description="Update personal demographic info, contact numbers, and medical profile."
+        maxWidth="lg"
+      >
+        <form onSubmit={handleUpdatePatient} className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input
+              label="First Name"
+              required
+              placeholder="e.g. Aarav"
+              value={editFormData.firstName}
+              onChange={(e) => setEditFormData({ ...editFormData, firstName: e.target.value })}
+            />
+            <Input
+              label="Last Name"
+              required
+              placeholder="e.g. Gupta"
+              value={editFormData.lastName}
+              onChange={(e) => setEditFormData({ ...editFormData, lastName: e.target.value })}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input
+              label="Mobile Number"
+              required
+              placeholder="10-digit mobile"
+              value={editFormData.phone}
+              onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
+            />
+            <Input
+              label="Email Address"
+              type="email"
+              placeholder="patient@example.com (Optional)"
+              value={editFormData.email}
+              onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Input
+              label="Date of Birth"
+              type="date"
+              value={editFormData.dateOfBirth}
+              onChange={(e) => setEditFormData({ ...editFormData, dateOfBirth: e.target.value })}
+            />
+
+            <div>
+              <label className="block text-xs font-semibold text-text-primary tracking-wide mb-1.5">
+                Gender
+              </label>
+              <select
+                className="block w-full rounded-lg border border-gray-300 py-2.5 px-3 text-sm bg-white text-text-primary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                value={editFormData.gender}
+                onChange={(e) => setEditFormData({ ...editFormData, gender: e.target.value })}
+              >
+                <option value="MALE">Male</option>
+                <option value="FEMALE">Female</option>
+                <option value="OTHER">Other</option>
+                <option value="NOT_SPECIFIED">Not Specified</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-text-primary tracking-wide mb-1.5">
+                Blood Group
+              </label>
+              <select
+                className="block w-full rounded-lg border border-gray-300 py-2.5 px-3 text-sm bg-white text-text-primary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                value={editFormData.bloodGroup}
+                onChange={(e) => setEditFormData({ ...editFormData, bloodGroup: e.target.value })}
+              >
+                <option value="UNKNOWN">Unknown</option>
+                <option value="A_POSITIVE">A+</option>
+                <option value="A_NEGATIVE">A-</option>
+                <option value="B_POSITIVE">B+</option>
+                <option value="B_NEGATIVE">B-</option>
+                <option value="AB_POSITIVE">AB+</option>
+                <option value="AB_NEGATIVE">AB-</option>
+                <option value="O_POSITIVE">O+</option>
+                <option value="O_NEGATIVE">O-</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input
+              label="Address"
+              placeholder="Apartment, Street, Sector"
+              value={editFormData.address}
+              onChange={(e) => setEditFormData({ ...editFormData, address: e.target.value })}
+            />
+            <Input
+              label="Emergency Contact"
+              placeholder="Name & Phone (e.g. Spouse: 9876543211)"
+              value={editFormData.emergencyContact}
+              onChange={(e) => setEditFormData({ ...editFormData, emergencyContact: e.target.value })}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input
+              label="Known Allergies"
+              placeholder="e.g. Sulfa drugs, Salicylic acid"
+              value={editFormData.allergies}
+              onChange={(e) => setEditFormData({ ...editFormData, allergies: e.target.value })}
+            />
+            <Input
+              label="Medical History / Notes"
+              placeholder="e.g. Hypertension, Acne breakouts"
+              value={editFormData.medicalHistory}
+              onChange={(e) => setEditFormData({ ...editFormData, medicalHistory: e.target.value })}
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-surface-border">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setEditPatient(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              isLoading={isEditSubmitting}
+            >
+              Update Patient
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Delete Patient Confirmation Modal */}
+      <Modal
+        isOpen={!!deletePatient}
+        onClose={() => setDeletePatient(null)}
+        title="Confirm Patient Deletion"
+        description="Are you sure you want to deactivate and remove this patient record?"
+        maxWidth="sm"
+      >
+        <div className="space-y-4">
+          <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-status-danger shrink-0 mt-0.5" />
+            <div className="text-xs text-red-800 space-y-1">
+              <p className="font-semibold">
+                Deactivating {deletePatient?.firstName} {deletePatient?.lastName} ({deletePatient?.patientCode})
+              </p>
+              <p>
+                This will soft-delete the patient from active directory lists while preserving past financial invoices and prescription audit history.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-surface-border">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDeletePatient(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+              isLoading={isDeleteSubmitting}
+              onClick={handleDeletePatient}
+            >
+              Confirm Delete
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
+

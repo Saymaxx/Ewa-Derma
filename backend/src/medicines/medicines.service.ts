@@ -236,4 +236,13 @@ export class MedicinesService {
 
     return existing;
   }
+
+  async remove(id: string) {
+    await this.findOne(id);
+    return this.prisma.medicine.update({
+      where: { id },
+      data: { isActive: false },
+    });
+  }
 }
+

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Param, Body, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Body, Query, UseGuards, Req } from '@nestjs/common';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -13,8 +13,9 @@ export class ServicesController {
 
   @Get()
   @Roles('ADMIN', 'RECEPTIONIST', 'DOCTOR')
-  async findAll() {
-    return this.servicesService.findAll();
+  async findAll(@Query('all') all?: string) {
+    const includeInactive = all === 'true';
+    return this.servicesService.findAll(includeInactive);
   }
 
   @Get(':id')
@@ -36,4 +37,12 @@ export class ServicesController {
     const userId = req.user?.id || req.user?.sub;
     return this.servicesService.update(id, dto, userId);
   }
+
+  @Delete(':id')
+  @Roles('ADMIN')
+  async remove(@Param('id') id: string, @Req() req: any) {
+    const userId = req.user?.id || req.user?.sub;
+    return this.servicesService.remove(id, userId);
+  }
 }
+

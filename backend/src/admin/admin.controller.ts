@@ -3,6 +3,8 @@ import {
   Get,
   Patch,
   Post,
+  Delete,
+  Param,
   Body,
   Query,
   UseInterceptors,
@@ -140,4 +142,68 @@ export class AdminController {
   async getAuditLogs(@Query() query: GetAuditLogsDto) {
     return this.auditLogService.findAll(query);
   }
+
+  // ==========================================
+  // STAFF & ROLE ACCESS MANAGEMENT
+  // ==========================================
+
+  @Get('users')
+  @Roles(RoleName.ADMIN)
+  @ApiOperation({ summary: 'List all staff users with roles (Admin only)' })
+  async listUsers() {
+    return this.adminService.listUsers();
+  }
+
+  @Post('users')
+  @Roles(RoleName.ADMIN)
+  @ApiOperation({ summary: 'Create new staff user (Admin only)' })
+  async createUser(
+    @Body()
+    dto: {
+      firstName: string;
+      lastName: string;
+      email: string;
+      phone?: string;
+      role: RoleName;
+      password?: string;
+    },
+  ) {
+    return this.adminService.createUser(dto);
+  }
+
+  @Patch('users/:id')
+  @Roles(RoleName.ADMIN)
+  @ApiOperation({ summary: 'Update staff user details / role (Admin only)' })
+  async updateUser(
+    @Param('id') id: string,
+    @Body()
+    dto: {
+      firstName?: string;
+      lastName?: string;
+      email?: string;
+      phone?: string;
+      role?: RoleName;
+      isActive?: boolean;
+    },
+  ) {
+    return this.adminService.updateUser(id, dto);
+  }
+
+  @Delete('users/:id')
+  @Roles(RoleName.ADMIN)
+  @ApiOperation({ summary: 'Deactivate staff user account (Admin only)' })
+  async deleteUser(@Param('id') id: string) {
+    return this.adminService.deleteUser(id);
+  }
+
+  @Post('users/:id/reset-password')
+  @Roles(RoleName.ADMIN)
+  @ApiOperation({ summary: 'Reset staff user password (Admin only)' })
+  async resetPassword(
+    @Param('id') id: string,
+    @Body() body: { password?: string },
+  ) {
+    return this.adminService.resetUserPassword(id, body?.password);
+  }
 }
+

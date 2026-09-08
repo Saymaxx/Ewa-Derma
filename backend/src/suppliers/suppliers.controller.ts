@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Param, Body, Query } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Body, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { SuppliersService } from './suppliers.service';
 import { CreateSupplierDto } from './dto/create-supplier.dto';
@@ -46,4 +46,13 @@ export class SuppliersController {
   async update(@Param('id') id: string, @Body() dto: UpdateSupplierDto) {
     return this.suppliersService.update(id, dto);
   }
+
+  @Delete(':id')
+  @Roles(RoleName.ADMIN, RoleName.INVENTORY_MANAGER)
+  @ApiOperation({ summary: 'Deactivate a supplier (Admin/Inventory Manager)' })
+  @ApiResponse({ status: 200, description: 'Supplier deactivated successfully' })
+  async remove(@Param('id') id: string) {
+    return this.suppliersService.remove(id);
+  }
 }
+

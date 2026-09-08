@@ -89,9 +89,9 @@ export class ServicesService implements OnModuleInit {
     return service;
   }
 
-  async findAll() {
+  async findAll(includeInactive = false) {
     return this.prisma.service.findMany({
-      where: { isActive: true },
+      where: includeInactive ? undefined : { isActive: true },
       orderBy: [{ category: 'asc' }, { name: 'asc' }],
     });
   }
@@ -126,12 +126,12 @@ export class ServicesService implements OnModuleInit {
     const updated = await this.prisma.service.update({
       where: { id },
       data: {
-        name: dto.name,
-        category: dto.category,
-        description: dto.description,
-        basePrice: dto.basePrice,
-        taxRate: dto.taxRate,
-        isActive: dto.isActive,
+        ...(dto.name !== undefined && { name: dto.name }),
+        ...(dto.category !== undefined && { category: dto.category }),
+        ...(dto.description !== undefined && { description: dto.description }),
+        ...(dto.basePrice !== undefined && { basePrice: dto.basePrice }),
+        ...(dto.taxRate !== undefined && { taxRate: dto.taxRate }),
+        ...(dto.isActive !== undefined && { isActive: dto.isActive }),
       },
     });
 
@@ -162,4 +162,26 @@ export class ServicesService implements OnModuleInit {
 
     return updated;
   }
+
+  async remove(id: string, userId?: string) {
+    await this.findOne(id);
+
+    const deactivated = await this.prisma.service.update({
+      where: { id },
+      data: { isActive: false },
+    });
+
+    if (userId) {
+      await this.auditLogService.log({
+        userId,
+        action: 'SERVICE_DEACTIVATED',
+        entityName: 'Service',
+        entityId: id,
+        details: { name: deactivated.name },
+      });
+    }
+
+    return deactivated;
+  }
 }
+

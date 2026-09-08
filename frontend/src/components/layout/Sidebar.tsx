@@ -23,6 +23,8 @@ import {
   UserCog,
   Bell,
   Sparkles,
+  Truck,
+  Layers,
   X,
 } from 'lucide-react';
 
@@ -67,12 +69,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
       icon: <Sparkles className="w-5 h-5" />,
       roles: ['ADMIN', 'RECEPTIONIST'],
     },
+    {
+      label: 'Services & Pricing',
+      href: '/services',
+      icon: <Layers className="w-5 h-5" />,
+      roles: ['ADMIN', 'RECEPTIONIST', 'DOCTOR'],
+    },
     // Doctor specific items
     {
       label: 'Doctor Workspace',
       href: '/doctor/dashboard',
       icon: <Stethoscope className="w-5 h-5" />,
-      roles: ['ADMIN', 'DOCTOR'],
+      roles: ['DOCTOR'],
     },
     {
       label: 'Doctor Roster',
@@ -86,7 +94,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
       icon: <CreditCard className="w-5 h-5" />,
       roles: ['ADMIN', 'RECEPTIONIST'],
     },
-    // Inventory items
+    // Inventory & Pharmacy items
     {
       label: 'Pharmacy Formulary',
       href: '/medicines',
@@ -97,6 +105,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
       label: 'Add New Medicine',
       href: '/medicines/new',
       icon: <PackagePlus className="w-5 h-5" />,
+      roles: ['ADMIN', 'INVENTORY_MANAGER'],
+    },
+    {
+      label: 'Suppliers & Vendors',
+      href: '/suppliers',
+      icon: <Truck className="w-5 h-5" />,
       roles: ['ADMIN', 'INVENTORY_MANAGER'],
     },
     {
@@ -117,7 +131,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
       icon: <Clock className="w-5 h-5" />,
       roles: ['ADMIN', 'INVENTORY_MANAGER'],
     },
-    // Reports
+    // Admin & Staff Management
+    {
+      label: 'Staff Management',
+      href: '/staff',
+      icon: <ShieldCheck className="w-5 h-5" />,
+      roles: ['ADMIN'],
+    },
+    // Reports & System
     {
       label: 'Reports & Analytics',
       href: '/reports',

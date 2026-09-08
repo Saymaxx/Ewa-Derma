@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { api } from '@/lib/api';
+import { api, getErrorMessage } from '@/lib/api';
+import { useAuth } from '@/lib/auth-context';
 import { useDebouncedValue } from '@/lib/useDebouncedValue';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -20,15 +21,19 @@ import {
   Clock,
   TrendingDown,
   Edit2,
+  Trash2,
   ShoppingCart,
   Sliders,
   Calendar,
 } from 'lucide-react';
 
 export default function MedicinesPage() {
+  const { hasRole } = useAuth();
   const { showToast } = useToast();
+  const isManager = hasRole(['ADMIN', 'INVENTORY_MANAGER']);
 
   const [medicines, setMedicines] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [alerts, setAlerts] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -37,11 +42,34 @@ export default function MedicinesPage() {
   // Edit Modal State
   const [selectedMed, setSelectedMed] = useState<any>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const [editPrice, setEditPrice] = useState<number>(0);
-  const [editPurchasePrice, setEditPurchasePrice] = useState<number>(0);
-  const [editMrp, setEditMrp] = useState<number>(0);
-  const [editMinStock, setEditMinStock] = useState<number>(10);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: '',
+    brand: '',
+    genericName: '',
+    categoryId: '',
+    unit: 'Tablet',
+    unitPrice: 0,
+    purchasePrice: 0,
+    mrp: 0,
+    minimumStock: 10,
+    gstRate: 0,
+    isActive: true,
+  });
+
+  // Deactivate Modal State
+  const [deleteMed, setDeleteMed] = useState<any | null>(null);
+  const [isDeleteSubmitting, setIsDeleteSubmitting] = useState(false);
+
+  // Fetch Categories
+  useEffect(() => {
+    api.get('/medicines/categories')
+      .then((res) => {
+        const data = res.data?.data || res.data;
+        if (Array.isArray(data)) setCategories(data);
+      })
+      .catch(() => {});
+  }, []);
 
   const fetchMedicines = useCallback(async (forceRefresh = false) => {
     // If no search filter and not forcing refresh, check cache first
@@ -89,32 +117,73 @@ export default function MedicinesPage() {
 
   const handleOpenEdit = (med: any) => {
     setSelectedMed(med);
-    setEditPrice(Number(med.unitPrice));
-    setEditPurchasePrice(Number(med.purchasePrice || 0));
-    setEditMrp(Number(med.mrp));
-    setEditMinStock(med.minimumStock);
+    setEditForm({
+      name: med.name || '',
+      brand: med.brand || '',
+      genericName: med.genericName || '',
+      categoryId: med.categoryId || '',
+      unit: med.unit || 'Tablet',
+      unitPrice: Number(med.unitPrice) || 0,
+      purchasePrice: Number(med.purchasePrice) || 0,
+      mrp: Number(med.mrp) || 0,
+      minimumStock: Number(med.minimumStock) || 10,
+      gstRate: Number(med.gstRate) || 0,
+      isActive: med.isActive !== false,
+    });
     setIsEditOpen(true);
   };
 
   const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedMed) return;
+
+    if (!editForm.name.trim()) {
+      showToast('Medicine name is required', 'warning');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       await api.patch(`/medicines/${selectedMed.id}`, {
-        unitPrice: editPrice,
-        purchasePrice: editPurchasePrice,
-        mrp: editMrp,
-        minimumStock: editMinStock,
+        name: editForm.name.trim(),
+        brand: editForm.brand.trim() || undefined,
+        genericName: editForm.genericName.trim() || undefined,
+        categoryId: editForm.categoryId || undefined,
+        unit: editForm.unit,
+        unitPrice: Number(editForm.unitPrice) || 0,
+        purchasePrice: Number(editForm.purchasePrice) || 0,
+        mrp: Number(editForm.mrp) || 0,
+        minimumStock: Number(editForm.minimumStock) || 10,
+        gstRate: Number(editForm.gstRate) || 0,
+        isActive: editForm.isActive,
       });
+
       showToast('Medicine master details updated successfully', 'success');
       clearCache(CACHE_KEYS.MEDICINES_LIST);
       setIsEditOpen(false);
       fetchMedicines(true);
     } catch (err: any) {
-      showToast(err.response?.data?.error?.message || 'Failed to update medicine', 'error');
+      const msg = getErrorMessage(err);
+      showToast(msg, 'error', 'Update Failed');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteMedicine = async () => {
+    if (!deleteMed) return;
+    setIsDeleteSubmitting(true);
+    try {
+      await api.delete(`/medicines/${deleteMed.id}`);
+      showToast(`Medicine '${deleteMed.name}' deactivated.`, 'success', 'Medicine Deactivated');
+      clearCache(CACHE_KEYS.MEDICINES_LIST);
+      setDeleteMed(null);
+      fetchMedicines(true);
+    } catch (err: any) {
+      const msg = getErrorMessage(err);
+      showToast(msg, 'error', 'Deactivation Failed');
+    } finally {
+      setIsDeleteSubmitting(false);
     }
   };
 
@@ -299,14 +368,28 @@ export default function MedicinesPage() {
                         )}
                       </td>
                       <td className="p-3.5 text-center">
-                        <button
-                          type="button"
-                          onClick={() => handleOpenEdit(med)}
-                          aria-label={`Edit ${med.name}`}
-                          className="min-w-[44px] min-h-[44px] p-2 inline-flex items-center justify-center rounded-xl text-primary hover:bg-primary-50 active:bg-primary-100 font-semibold cursor-pointer transition-colors"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
+                        <div className="flex items-center justify-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEdit(med)}
+                            aria-label={`Edit ${med.name}`}
+                            className="p-1.5 rounded-lg text-primary hover:bg-primary-50 transition-colors"
+                            title="Edit Medicine"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          {isManager && (
+                            <button
+                              type="button"
+                              onClick={() => setDeleteMed(med)}
+                              aria-label={`Deactivate ${med.name}`}
+                              className="p-1.5 rounded-lg text-status-danger hover:bg-status-danger/10 transition-colors"
+                              title="Deactivate Medicine"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -323,77 +406,184 @@ export default function MedicinesPage() {
           isOpen={isEditOpen}
           onClose={() => setIsEditOpen(false)}
           title={`Edit Medicine Master — ${selectedMed.name}`}
-          maxWidth="md"
+          description="Update medicine formulation, classification, pricing, and stock alert levels."
+          maxWidth="lg"
         >
-          <form onSubmit={handleSaveEdit} className="space-y-4 text-xs text-text-main">
-            <div>
-              <label className="font-semibold text-text-secondary block mb-1">
-                Selling Price per Unit (₹)
-              </label>
+          <form onSubmit={handleSaveEdit} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Input
-                type="number"
-                step="0.01"
-                min="0"
-                value={editPrice}
-                onChange={(e) => setEditPrice(parseFloat(e.target.value) || 0)}
-                className="text-xs"
+                label="Medicine Name"
+                value={editForm.name}
+                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
                 required
               />
-            </div>
-
-            <div>
-              <label className="font-semibold text-text-secondary block mb-1">
-                Purchase Cost Price (₹)
-              </label>
               <Input
-                type="number"
-                step="0.01"
-                min="0"
-                value={editPurchasePrice}
-                onChange={(e) => setEditPurchasePrice(parseFloat(e.target.value) || 0)}
-                className="text-xs"
+                label="Brand / Manufacturer"
+                placeholder="e.g. Glenmark, Cipla"
+                value={editForm.brand}
+                onChange={(e) => setEditForm({ ...editForm, brand: e.target.value })}
               />
             </div>
 
-            <div>
-              <label className="font-semibold text-text-secondary block mb-1">
-                Maximum Retail Price / MRP (₹)
-              </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Input
+                label="Generic Composition / Salt"
+                placeholder="e.g. Adapalene 0.1% + Benzoyl Peroxide 2.5%"
+                value={editForm.genericName}
+                onChange={(e) => setEditForm({ ...editForm, genericName: e.target.value })}
+              />
+              <div>
+                <label className="block text-xs font-semibold text-text-primary tracking-wide mb-1.5">
+                  Category
+                </label>
+                <select
+                  className="block w-full rounded-lg border border-gray-300 py-2.5 px-3 text-sm bg-white text-text-primary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                  value={editForm.categoryId}
+                  onChange={(e) => setEditForm({ ...editForm, categoryId: e.target.value })}
+                >
+                  <option value="">Select Category...</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-text-primary tracking-wide mb-1.5">
+                  Packaging / Unit
+                </label>
+                <select
+                  className="block w-full rounded-lg border border-gray-300 py-2.5 px-3 text-sm bg-white text-text-primary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                  value={editForm.unit}
+                  onChange={(e) => setEditForm({ ...editForm, unit: e.target.value })}
+                >
+                  <option value="Tablet">Tablet</option>
+                  <option value="Capsule">Capsule</option>
+                  <option value="Tube (Cream/Gel)">Tube (Cream/Gel)</option>
+                  <option value="Bottle (Serum/Lotion)">Bottle (Serum/Lotion)</option>
+                  <option value="Bottle (Shampoo/Wash)">Bottle (Shampoo/Wash)</option>
+                  <option value="Syringe / Vial">Syringe / Vial</option>
+                  <option value="Unit">Unit</option>
+                </select>
+              </div>
+
+              <Input
+                label="Selling Price (₹)"
                 type="number"
                 step="0.01"
                 min="0"
-                value={editMrp}
-                onChange={(e) => setEditMrp(parseFloat(e.target.value) || 0)}
-                className="text-xs"
+                value={editForm.unitPrice}
+                onChange={(e) => setEditForm({ ...editForm, unitPrice: parseFloat(e.target.value) || 0 })}
+                required
+              />
+
+              <Input
+                label="MRP (₹)"
+                type="number"
+                step="0.01"
+                min="0"
+                value={editForm.mrp}
+                onChange={(e) => setEditForm({ ...editForm, mrp: parseFloat(e.target.value) || 0 })}
               />
             </div>
 
-            <div>
-              <label className="font-semibold text-text-secondary block mb-1">
-                Minimum Stock Alert Threshold (Units)
-              </label>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <Input
+                label="Purchase Cost (₹)"
+                type="number"
+                step="0.01"
+                min="0"
+                value={editForm.purchasePrice}
+                onChange={(e) => setEditForm({ ...editForm, purchasePrice: parseFloat(e.target.value) || 0 })}
+              />
+
+              <Input
+                label="GST Rate (%)"
+                type="number"
+                min="0"
+                max="28"
+                value={editForm.gstRate}
+                onChange={(e) => setEditForm({ ...editForm, gstRate: parseFloat(e.target.value) || 0 })}
+              />
+
+              <Input
+                label="Min Stock Alert (Units)"
                 type="number"
                 min="1"
-                value={editMinStock}
-                onChange={(e) => setEditMinStock(parseInt(e.target.value) || 10)}
-                className="text-xs"
+                value={editForm.minimumStock}
+                onChange={(e) => setEditForm({ ...editForm, minimumStock: parseInt(e.target.value) || 10 })}
                 required
               />
             </div>
 
-            <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" size="sm" type="button" onClick={() => setIsEditOpen(false)}>
+            <div>
+              <label className="block text-xs font-semibold text-text-primary tracking-wide mb-1.5">
+                Formulary Status
+              </label>
+              <select
+                className="block w-full rounded-lg border border-gray-300 py-2.5 px-3 text-sm bg-white text-text-primary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                value={editForm.isActive ? 'true' : 'false'}
+                onChange={(e) => setEditForm({ ...editForm, isActive: e.target.value === 'true' })}
+              >
+                <option value="true">Active (Available for Prescribing & Dispensing)</option>
+                <option value="false">Inactive / Discontinued</option>
+              </select>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-4 border-t border-surface-border">
+              <Button variant="outline" type="button" onClick={() => setIsEditOpen(false)}>
                 Cancel
               </Button>
-              <Button variant="primary" size="sm" type="submit" isLoading={isSubmitting}>
+              <Button variant="primary" type="submit" isLoading={isSubmitting}>
                 Save Master Changes
               </Button>
             </div>
           </form>
         </Modal>
       )}
+
+      {/* Deactivate Medicine Modal */}
+      <Modal
+        isOpen={!!deleteMed}
+        onClose={() => setDeleteMed(null)}
+        title="Confirm Medicine Deactivation"
+        description="Are you sure you want to deactivate this medicine from the active catalog?"
+        maxWidth="sm"
+      >
+        <div className="space-y-4">
+          <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-status-danger shrink-0 mt-0.5" />
+            <div className="text-xs text-red-800 space-y-1">
+              <p className="font-semibold">
+                Deactivating {deleteMed?.name}
+              </p>
+              <p>
+                This item will no longer appear in the doctor prescription builder or inward purchase selection. Past batches and dispensed sales records will remain preserved.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-surface-border">
+            <Button type="button" variant="outline" onClick={() => setDeleteMed(null)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+              isLoading={isDeleteSubmitting}
+              onClick={handleDeleteMedicine}
+            >
+              Confirm Deactivation
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
+

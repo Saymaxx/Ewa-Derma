@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Patch,
+  Delete,
   Param,
   Body,
   Query,
@@ -61,5 +62,14 @@ export class PatientsController {
   @ApiResponse({ status: 403, description: 'Forbidden for Doctors (read-only) & Inventory Managers' })
   async update(@Param('id') id: string, @Body() updatePatientDto: UpdatePatientDto) {
     return this.patientsService.update(id, updatePatientDto);
+  }
+
+  @Delete(':id')
+  @Roles(RoleName.ADMIN)
+  @ApiOperation({ summary: 'Delete or deactivate patient (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Patient deactivated successfully' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  async remove(@Param('id') id: string) {
+    return this.patientsService.remove(id);
   }
 }

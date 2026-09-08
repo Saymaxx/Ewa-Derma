@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Param, Body, Query } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Body, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { MedicinesService } from './medicines.service';
 import { CreateMedicineDto } from './dto/create-medicine.dto';
@@ -12,12 +12,6 @@ import { RoleName } from '@prisma/client';
 export class MedicinesController {
   constructor(private readonly medicinesService: MedicinesService) {}
 
-  @Get()
-  @Roles(RoleName.ADMIN, RoleName.DOCTOR, RoleName.RECEPTIONIST, RoleName.INVENTORY_MANAGER)
-  @ApiOperation({ summary: 'Search medicines for prescription builder and stock views' })
-  @ApiQuery({ name: 'search', required: false, type: String })
-  @ApiQuery({ name: 'limit', required: false, type: Number })
-  @ApiResponse({ status: 200, description: 'List of matching medicines with computed stock' })
   @Get()
   @Roles(RoleName.ADMIN, RoleName.DOCTOR, RoleName.RECEPTIONIST, RoleName.INVENTORY_MANAGER)
   @ApiOperation({ summary: 'Search medicines for prescription builder and stock views' })
@@ -75,4 +69,13 @@ export class MedicinesController {
   async update(@Param('id') id: string, @Body() updateMedicineDto: UpdateMedicineDto) {
     return this.medicinesService.update(id, updateMedicineDto);
   }
+
+  @Delete(':id')
+  @Roles(RoleName.ADMIN, RoleName.INVENTORY_MANAGER)
+  @ApiOperation({ summary: 'Deactivate medicine from formulary' })
+  @ApiResponse({ status: 200, description: 'Medicine deactivated successfully' })
+  async remove(@Param('id') id: string) {
+    return this.medicinesService.remove(id);
+  }
 }
+
