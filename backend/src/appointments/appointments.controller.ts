@@ -10,6 +10,7 @@ import {
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { AppointmentsService } from './appointments.service';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
+import { CreateProcedureVisitDto } from './dto/create-procedure-visit.dto';
 import { UpdateAppointmentStatusDto } from './dto/update-appointment-status.dto';
 import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser, AuthenticatedUser } from '../common/decorators/current-user.decorator';
@@ -32,6 +33,27 @@ export class AppointmentsController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.appointmentsService.create(createAppointmentDto, user.email || user.id);
+  }
+
+  @Post('procedure-visit')
+  @Roles(RoleName.ADMIN, RoleName.RECEPTIONIST)
+  @ApiOperation({ summary: 'Fast-track walk-in procedure visit creation and instant queue check-in' })
+  @ApiResponse({ status: 201, description: 'Procedure visit created and placed directly into live checked-in queue' })
+  @ApiResponse({ status: 409, description: 'Conflict - Doctor already booked for an overlapping slot' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  async createProcedureVisit(
+    @Body() dto: CreateProcedureVisitDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.appointmentsService.createProcedureVisit(dto, user.email || user.id);
+  }
+
+  @Get('procedure-services')
+  @Roles(RoleName.ADMIN, RoleName.RECEPTIONIST, RoleName.DOCTOR)
+  @ApiOperation({ summary: 'List procedure services available for fast-track walk-in logging (excludes plain consultation)' })
+  @ApiResponse({ status: 200, description: 'List of procedure services' })
+  async getProcedureServices() {
+    return this.appointmentsService.getProcedureServices();
   }
 
   @Get()

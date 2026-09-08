@@ -103,6 +103,19 @@ All endpoints follow the uniform API response shape:
   - `IN_CONSULTATION` → `COMPLETED`, `CANCELLED`
   - `COMPLETED`, `CANCELLED`, `NO_SHOW` → Terminal
 
+### 4.5 Fast-Track Walk-in Procedure Visit Creation
+- **Method:** `POST`
+- **Path:** `/api/appointments/procedure-visit`
+- **Access:** `ADMIN`, `RECEPTIONIST`
+- **Body:** `{ patientId, doctorId, procedureServiceId, notes? }`
+- **Functionality:** Validates patient, doctor, and procedure service. Checks double-booking. Creates appointment with `type: PROCEDURE`, `procedureServiceId`, and advances status machine through real transitions (`SCHEDULED` → `CONFIRMED` → `CHECKED_IN`), logging full audit trail in `appointment_status_history`. Lands directly in live waiting queue.
+
+### 4.6 List Procedure Services
+- **Method:** `GET`
+- **Path:** `/api/appointments/procedure-services`
+- **Access:** `ADMIN`, `RECEPTIONIST`, `DOCTOR`
+- **Response:** List of active procedure services excluding plain consultation services.
+
 ---
 
 ## 5. Medicines Formulary Module (Phase 3)

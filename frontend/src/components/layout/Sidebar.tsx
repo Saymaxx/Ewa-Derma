@@ -22,6 +22,7 @@ import {
   Clock,
   UserCog,
   Bell,
+  Sparkles,
   X,
 } from 'lucide-react';
 
@@ -59,6 +60,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
       href: '/appointments',
       icon: <Calendar className="w-5 h-5" />,
       roles: ['ADMIN', 'RECEPTIONIST', 'DOCTOR'],
+    },
+    {
+      label: 'Patient Procedures',
+      href: '/procedures',
+      icon: <Sparkles className="w-5 h-5" />,
+      roles: ['ADMIN', 'RECEPTIONIST'],
     },
     // Doctor specific items
     {

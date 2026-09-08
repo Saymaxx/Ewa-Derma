@@ -366,6 +366,8 @@ model Appointment {
 
   patient       Patient                    @relation(fields: [patientId], references: [id])
   doctor        Doctor                     @relation(fields: [doctorId], references: [id])
+  procedureServiceId String?           @map("procedure_service_id")
+  procedureService   Service?          @relation("ProcedureAppointments", fields: [procedureServiceId], references: [id])
   statusHistory AppointmentStatusHistory[]
   consultation  Consultation?
   invoices      Invoice[]
@@ -375,6 +377,7 @@ model Appointment {
   @@index([doctorId, appointmentDate])
   @@index([appointmentDate, status])
   @@index([doctorId, appointmentDate, status])
+  @@index([procedureServiceId])
   @@map("appointments")
 }
 
@@ -625,8 +628,9 @@ model Service {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  prices       ServicePrice[]
-  invoiceItems InvoiceItem[]
+  prices                ServicePrice[]
+  invoiceItems          InvoiceItem[]
+  procedureAppointments Appointment[]  @relation("ProcedureAppointments")
 
   @@map("services")
 }

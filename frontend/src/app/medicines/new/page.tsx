@@ -117,7 +117,7 @@ export default function AddNewMedicinePage() {
 
     setIsSubmitting(true);
     try {
-      const finalUnit = unit === 'OTHER' ? customUnit.trim() || 'Unit' : unit;
+      const finalUnit = unit === 'OTHER' ? customUnit.trim() || 'Unit' : unit || 'Unit';
 
       // Match category ID: if categoryId matches a UUID, send it; if it's name-only or valid, find from list
       const matchedCat = categories.find((c) => c.id === categoryId || c.name === categoryId);
@@ -273,15 +273,15 @@ export default function AddNewMedicinePage() {
 
               <div>
                 <label className="text-xs font-semibold text-text-main block mb-1">
-                  Packaging / Unit Formulation <span className="text-red-500">*</span>
+                  Packaging / Unit Formulation
                 </label>
                 <div className={unit === 'OTHER' ? 'grid grid-cols-1 sm:grid-cols-2 gap-2' : ''}>
                   <select
                     value={unit}
                     onChange={(e) => setUnit(e.target.value)}
                     className="w-full h-9 rounded-xl border border-surface-border bg-white px-3 text-xs focus:border-primary focus:outline-none"
-                    required
                   >
+                    <option value="">-- Select Unit (Optional) --</option>
                     {COMMON_UNITS.map((u) => (
                       <option key={u} value={u}>
                         {u}
@@ -297,7 +297,6 @@ export default function AddNewMedicinePage() {
                       value={customUnit}
                       onChange={(e) => setCustomUnit(e.target.value)}
                       className="text-xs"
-                      required
                     />
                   )}
                 </div>

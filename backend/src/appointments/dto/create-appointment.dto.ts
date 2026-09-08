@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsNotEmpty,
   IsString,
@@ -55,4 +55,9 @@ export class CreateAppointmentDto {
   @IsOptional()
   @IsBoolean()
   isWalkIn?: boolean;
+
+  @ApiPropertyOptional({ example: 'uuid-service-id', description: 'Linked Procedure Service ID' })
+  @IsOptional()
+  @IsString()
+  procedureServiceId?: string;
 }

@@ -15,6 +15,8 @@ interface CreateInvoiceModalProps {
   onSuccess: (newInvoice?: any) => void;
   initialPatientId?: string;
   initialPatientName?: string;
+  initialServiceId?: string;
+  initialAppointmentId?: string;
 }
 
 interface LineItem {
@@ -35,6 +37,8 @@ export default function CreateInvoiceModal({
   onSuccess,
   initialPatientId = '',
   initialPatientName = '',
+  initialServiceId = '',
+  initialAppointmentId = '',
 }: CreateInvoiceModalProps) {
   const { showToast } = useToast();
 
@@ -66,17 +70,27 @@ export default function CreateInvoiceModal({
       setDiscountReason('');
       setTaxRate(0);
       setNotes('');
-      setItems([
-        {
-          id: '1',
-          itemType: 'SERVICE',
-          description: '',
-          quantity: 1,
-          unitPrice: 0,
-          discount: 0,
-          taxRate: 0,
-        },
-      ]);
+
+      const setupItems = (svcsList: any[], prefillSvcId?: string) => {
+        if (!svcsList || svcsList.length === 0) return;
+        const matched = prefillSvcId ? svcsList.find((s) => s.id === prefillSvcId) : null;
+        const defaultCons = svcsList.find((s: any) => s.name?.includes('Consultation')) || svcsList[0];
+        const chosen = matched || defaultCons;
+        if (chosen) {
+          setItems([
+            {
+              id: '1',
+              itemType: 'SERVICE',
+              serviceId: chosen.id,
+              description: chosen.name,
+              quantity: 1,
+              unitPrice: Number(chosen.basePrice),
+              discount: 0,
+              taxRate: 0,
+            },
+          ]);
+        }
+      };
 
       // Load patients safely
       api
@@ -87,54 +101,42 @@ export default function CreateInvoiceModal({
         })
         .catch(() => setPatients([]));
 
-      // Load services safely (cached)
-      const cachedServices = getCachedData<any[]>('services_list');
-      if (cachedServices) {
-        setServices(cachedServices);
-        if (cachedServices.length > 0) {
-          const cons = cachedServices.find((s: any) => s.name?.includes('Consultation')) || cachedServices[0];
-          setItems([
-            {
-              id: '1',
-              itemType: 'SERVICE',
-              serviceId: cons.id,
-              description: cons.name,
-              quantity: 1,
-              unitPrice: Number(cons.basePrice),
-              discount: 0,
-              taxRate: 0,
-            },
-          ]);
-        }
-      } else {
-        api
-          .get('/services')
-          .then((res) => {
+      // Check if patient has a linked procedure appointment to prefill
+      let prefillServiceId = initialServiceId;
+
+      const initServicesAndPrefill = async () => {
+        try {
+          if (!prefillServiceId && initialPatientId) {
+            const aptRes = await api
+              .get('/appointments', { params: { patientId: initialPatientId, limit: 1 } })
+              .catch(() => ({ data: { data: [] } }));
+            const aptData = aptRes?.data?.data ?? aptRes?.data;
+            const latestApt = Array.isArray(aptData) ? aptData[0] : null;
+            if (latestApt?.procedureServiceId) {
+              prefillServiceId = latestApt.procedureServiceId;
+            }
+          }
+
+          const cachedServices = getCachedData<any[]>('services_list');
+          if (cachedServices && cachedServices.length > 0) {
+            setServices(cachedServices);
+            setupItems(cachedServices, prefillServiceId);
+          } else {
+            const res = await api.get('/services');
             const raw = res?.data?.data ?? res?.data;
             const svcs = Array.isArray(raw) ? raw : [];
             setCachedData('services_list', svcs, 300000); // 5 min TTL
             setServices(svcs);
+            setupItems(svcs, prefillServiceId);
+          }
+        } catch {
+          // fallback gracefully
+        }
+      };
 
-            if (svcs.length > 0) {
-              const cons = svcs.find((s: any) => s.name?.includes('Consultation')) || svcs[0];
-              setItems([
-                {
-                  id: '1',
-                  itemType: 'SERVICE',
-                  serviceId: cons.id,
-                  description: cons.name,
-                  quantity: 1,
-                  unitPrice: Number(cons.basePrice),
-                  discount: 0,
-                  taxRate: 0,
-                },
-              ]);
-            }
-          })
-          .catch(() => setServices([]));
-      }
+      initServicesAndPrefill();
     }
-  }, [isOpen, initialPatientId]);
+  }, [isOpen, initialPatientId, initialServiceId, initialAppointmentId]);
 
   const safeServices = Array.isArray(services) ? services : [];
   const safePatients = Array.isArray(patients) ? patients : [];

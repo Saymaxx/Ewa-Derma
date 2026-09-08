@@ -8,6 +8,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { EntityIdService } from '../common/services/entity-id.service';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
+import { CreateProcedureVisitDto } from './dto/create-procedure-visit.dto';
 import { UpdateAppointmentStatusDto } from './dto/update-appointment-status.dto';
 import { AppointmentStatus, AppointmentType } from '@prisma/client';
 
@@ -137,6 +138,7 @@ export class AppointmentsService {
         appointmentCode,
         patientId: dto.patientId,
         doctorId: dto.doctorId,
+        procedureServiceId: dto.procedureServiceId || null,
         appointmentDate: appointmentDateObj,
         startTime: dto.startTime,
         endTime: dto.endTime,
@@ -152,6 +154,14 @@ export class AppointmentsService {
         doctor: {
           include: {
             user: { select: { firstName: true, lastName: true } },
+          },
+        },
+        procedureService: {
+          select: {
+            id: true,
+            name: true,
+            category: true,
+            basePrice: true,
           },
         },
       },
@@ -225,6 +235,14 @@ export class AppointmentsService {
             },
           },
         },
+        procedureService: {
+          select: {
+            id: true,
+            name: true,
+            category: true,
+            basePrice: true,
+          },
+        },
       },
     });
   }
@@ -295,6 +313,212 @@ export class AppointmentsService {
     };
   }
 
+  async createProcedureVisit(dto: CreateProcedureVisitDto, createdByUserId?: string) {
+    // 1. Verify Patient exists and is active
+    const patient = await this.prisma.patient.findUnique({
+      where: { id: dto.patientId },
+    });
+    if (!patient || !patient.isActive) {
+      throw new NotFoundException(`Patient not found or inactive with ID: ${dto.patientId}`);
+    }
+
+    // 2. Verify Doctor exists and is active
+    const doctor = await this.prisma.doctor.findUnique({
+      where: { id: dto.doctorId },
+      include: {
+        user: { select: { firstName: true, lastName: true } },
+      },
+    });
+    if (!doctor || !doctor.isActive) {
+      throw new NotFoundException(`Doctor not found or inactive with ID: ${dto.doctorId}`);
+    }
+
+    // 3. Verify Procedure Service exists and is active
+    const service = await this.prisma.service.findUnique({
+      where: { id: dto.procedureServiceId },
+    });
+    if (!service || !service.isActive) {
+      throw new NotFoundException(`Procedure service not found or inactive with ID: ${dto.procedureServiceId}`);
+    }
+
+    // 4. Time slot computation for walk-in procedure visit
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+    const appointmentDateObj = new Date(todayStr);
+
+    const startH = String(now.getHours()).padStart(2, '0');
+    const startM = String(now.getMinutes()).padStart(2, '0');
+    const startTime = `${startH}:${startM}`;
+
+    const endMinutesDate = new Date(now.getTime() + 30 * 60 * 1000);
+    const endH = String(endMinutesDate.getHours()).padStart(2, '0');
+    const endM = String(endMinutesDate.getMinutes()).padStart(2, '0');
+    const endTime = `${endH}:${endM}`;
+
+    // 5. Doctor working days check
+    if (doctor.workingDays) {
+      const dayShortNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const dayFullNames = [
+        'Sunday',
+        'Monday',
+        'Tuesday',
+        'Wednesday',
+        'Thursday',
+        'Friday',
+        'Saturday',
+      ];
+      const dayOfWeekShort = dayShortNames[now.getDay()];
+      const dayOfWeekFull = dayFullNames[now.getDay()];
+      const allowedDays = doctor.workingDays.split(',').map((d) => d.trim().slice(0, 3));
+
+      if (!allowedDays.includes(dayOfWeekShort)) {
+        throw new BadRequestException(
+          `Dr. ${doctor.user.firstName} ${doctor.user.lastName} is not available on ${dayOfWeekFull}s (${todayStr}). Scheduled working days: ${doctor.workingDays}.`,
+        );
+      }
+    }
+
+    // 6. Double-booking slot conflict check
+    const existingConflict = await this.prisma.appointment.findFirst({
+      where: {
+        doctorId: dto.doctorId,
+        appointmentDate: appointmentDateObj,
+        status: {
+          notIn: [AppointmentStatus.CANCELLED, AppointmentStatus.NO_SHOW],
+        },
+        OR: [
+          {
+            startTime: { lt: endTime },
+            endTime: { gt: startTime },
+          },
+          {
+            startTime: startTime,
+          },
+        ],
+      },
+    });
+
+    if (existingConflict) {
+      throw new ConflictException(`This time slot is already booked for Dr. ${doctor.user.lastName}. Please select another time or doctor.`);
+    }
+
+    // 7. Generate Sequential Appointment Code
+    const appointmentCode = await this.entityIdService.generateNextId('A');
+
+    // 8. Create appointment in initial SCHEDULED status
+    const appointment = await this.prisma.appointment.create({
+      data: {
+        appointmentCode,
+        patientId: dto.patientId,
+        doctorId: dto.doctorId,
+        procedureServiceId: dto.procedureServiceId,
+        appointmentDate: appointmentDateObj,
+        startTime,
+        endTime,
+        type: AppointmentType.PROCEDURE,
+        status: AppointmentStatus.SCHEDULED,
+        reason: service.name,
+        notes: dto.notes?.trim() || null,
+        isWalkIn: true,
+      },
+      include: {
+        patient: true,
+        doctor: {
+          include: {
+            user: { select: { firstName: true, lastName: true } },
+          },
+        },
+        procedureService: {
+          select: {
+            id: true,
+            name: true,
+            category: true,
+            basePrice: true,
+          },
+        },
+      },
+    });
+
+    // 9. Advance status machine through canonical transition steps: SCHEDULED -> CONFIRMED -> CHECKED_IN
+    // 9a. Log initial SCHEDULED in audit history
+    await this.prisma.appointmentStatusHistory.create({
+      data: {
+        appointmentId: appointment.id,
+        fromStatus: null,
+        toStatus: AppointmentStatus.SCHEDULED,
+        changedBy: createdByUserId || 'SYSTEM',
+        comment: `Walk-in procedure visit registered: ${service.name}`,
+      },
+    });
+
+    // 9b. Transition SCHEDULED -> CONFIRMED
+    await this.prisma.appointment.update({
+      where: { id: appointment.id },
+      data: { status: AppointmentStatus.CONFIRMED },
+    });
+    await this.prisma.appointmentStatusHistory.create({
+      data: {
+        appointmentId: appointment.id,
+        fromStatus: AppointmentStatus.SCHEDULED,
+        toStatus: AppointmentStatus.CONFIRMED,
+        changedBy: createdByUserId || 'SYSTEM',
+        comment: 'Auto-confirmed walk-in arrival',
+      },
+    });
+
+    // 9c. Transition CONFIRMED -> CHECKED_IN (lands directly in doctor live waiting queue)
+    const checkedInAppointment = await this.prisma.appointment.update({
+      where: { id: appointment.id },
+      data: {
+        status: AppointmentStatus.CHECKED_IN,
+        checkedInAt: now,
+      },
+      include: {
+        patient: true,
+        doctor: {
+          include: {
+            user: { select: { firstName: true, lastName: true } },
+          },
+        },
+        procedureService: {
+          select: {
+            id: true,
+            name: true,
+            category: true,
+            basePrice: true,
+          },
+        },
+      },
+    });
+
+    await this.prisma.appointmentStatusHistory.create({
+      data: {
+        appointmentId: appointment.id,
+        fromStatus: AppointmentStatus.CONFIRMED,
+        toStatus: AppointmentStatus.CHECKED_IN,
+        changedBy: createdByUserId || 'SYSTEM',
+        comment: `Checked in for procedure: ${service.name}`,
+      },
+    });
+
+    this.logger.log(`Created & Checked In Procedure Visit: ${appointment.appointmentCode} (${service.name}) for Patient ${patient.patientCode}`);
+    return checkedInAppointment;
+  }
+
+  async getProcedureServices() {
+    const services = await this.prisma.service.findMany({
+      where: {
+        isActive: true,
+      },
+      orderBy: { name: 'asc' },
+    });
+    return services.filter(
+      (s) =>
+        s.category?.toLowerCase() !== 'consultation' &&
+        !s.name.toLowerCase().includes('consultation'),
+    );
+  }
+
   async getLiveWaitingQueue(doctorId?: string) {
     return this.prisma.appointment.findMany({
       where: {
@@ -319,6 +543,14 @@ export class AppointmentsService {
             user: { select: { firstName: true, lastName: true } },
           },
         },
+        procedureService: {
+          select: {
+            id: true,
+            name: true,
+            category: true,
+            basePrice: true,
+          },
+        },
       },
     });
   }
@@ -340,6 +572,14 @@ export class AppointmentsService {
                 phoneNumber: true,
               },
             },
+          },
+        },
+        procedureService: {
+          select: {
+            id: true,
+            name: true,
+            category: true,
+            basePrice: true,
           },
         },
         statusHistory: {
@@ -396,6 +636,14 @@ export class AppointmentsService {
           doctor: {
             include: {
               user: { select: { firstName: true, lastName: true } },
+            },
+          },
+          procedureService: {
+            select: {
+              id: true,
+              name: true,
+              category: true,
+              basePrice: true,
             },
           },
         },
