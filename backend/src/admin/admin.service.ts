@@ -19,7 +19,7 @@ export class AdminService {
         data: {
           clinicName: 'Ewa Derma Clinic',
           address: '4th Floor, Medical Arts Building, MG Road, Bangalore 560001',
-          contactNumber: '+91 98765 43210',
+          contactNumber: '+91 9120854977',
           email: 'contact@ewaderma.com',
           gstNumber: '29ABCDE1234F1Z5',
           taxRate: 18.0,
@@ -42,7 +42,7 @@ export class AdminService {
         data: {
           clinicName: dto.clinicName || 'Ewa Derma Clinic',
           address: dto.address || '4th Floor, Medical Arts Building, MG Road, Bangalore 560001',
-          contactNumber: dto.contactNumber || '+91 98765 43210',
+          contactNumber: dto.contactNumber || '+91 9120854977',
           email: dto.email || 'contact@ewaderma.com',
           gstNumber: dto.gstNumber || null,
           taxRate: dto.taxRate !== undefined ? dto.taxRate : 18.0,

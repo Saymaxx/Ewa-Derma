@@ -543,7 +543,7 @@ export default function LoginPage() {
 
         {/* Footer */}
         <div className="relative z-10 pt-4 text-center sm:text-right text-[11px] text-stone-500 font-medium">
-          <span>Phone: 0120-5244840 • Ewa Derma Clinic Management System</span>
+          <span>Phone: +91 9120854977 • Ewa Derma Clinic Management System</span>
         </div>
       </div>
     </div>

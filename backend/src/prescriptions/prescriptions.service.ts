@@ -257,7 +257,7 @@ export class PrescriptionsService {
 
     const clinicName = settings?.clinicName || 'Ewa Derma Clinic';
     const clinicAddress = settings?.address || 'The Millennium Place, Golf City, Sector B, Ansal API, Lucknow, UP 226030';
-    const clinicPhone = settings?.contactNumber || '0120-5244840';
+    const clinicPhone = settings?.contactNumber || '+91 9120854977';
 
     const patient = prescription.patient;
     const doctor = prescription.doctor;

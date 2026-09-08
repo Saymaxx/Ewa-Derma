@@ -83,7 +83,7 @@ export class NotificationsController {
     const pdfUint8 = await this.invoicePdfService.generateInvoicePdf({
       clinicName: clinic?.clinicName || 'EWA DERMA CLINIC',
       clinicAddress: clinic?.address || '6th Floor, The Millennium Place, Golf City, Lucknow',
-      clinicPhone: clinic?.contactNumber || '0120-5244840',
+      clinicPhone: clinic?.contactNumber || '+91 9120854977',
       clinicGst: clinic?.gstNumber || undefined,
       invoiceCode: invoice.invoiceCode,
       date: invoice.createdAt.toISOString().split('T')[0],

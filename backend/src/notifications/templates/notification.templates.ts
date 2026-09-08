@@ -36,13 +36,13 @@ export const META_TEMPLATES = {
     name: 'patient_registration_confirmation',
     category: 'UTILITY',
     language: 'en',
-    sample: 'Welcome to Ewa Derma Clinic, {{1}}! Your registration is confirmed. Patient ID: {{2}}. For appointments, call 0120-5244840.',
+    sample: 'Welcome to Ewa Derma Clinic, {{1}}! Your registration is confirmed. Patient ID: {{2}}. For appointments, call +91 9120854977.',
   },
 } as const;
 
 export class NotificationTemplates {
   private static readonly CLINIC_NAME = 'Ewa Derma Clinic';
-  private static readonly CLINIC_PHONE = '0120-5244840';
+  private static readonly CLINIC_PHONE = '+91 9120854977';
   private static readonly CLINIC_ADDRESS = 'Sector 18, Transport Nagar, Lucknow';
 
   static patientRegistration(data: PatientRegistrationTemplateData) {
@@ -51,7 +51,7 @@ export class NotificationTemplates {
     const subject = `Welcome to ${clinic} — Registration Confirmed (${data.patientId})`;
 
     // Exact approved wording for Meta WhatsApp Cloud API template:
-    // "Welcome to Ewa Derma Clinic, {{1}}! Your registration is confirmed. Patient ID: {{2}}. For appointments, call 0120-5244840."
+    // "Welcome to Ewa Derma Clinic, {{1}}! Your registration is confirmed. Patient ID: {{2}}. For appointments, call +91 9120854977."
     const content = `Welcome to ${clinic}, ${data.patientName}! Your registration is confirmed. Patient ID: ${data.patientId}. For appointments, call ${phone}.`;
 
     return {

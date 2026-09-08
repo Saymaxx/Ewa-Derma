@@ -21,7 +21,7 @@ export class UpdateClinicSettingsDto {
   @IsString()
   address?: string;
 
-  @ApiPropertyOptional({ example: '+91 98765 43210', description: 'Primary contact telephone number' })
+  @ApiPropertyOptional({ example: '+91 9120854977', description: 'Primary contact telephone number' })
   @IsOptional()
   @IsString()
   contactNumber?: string;

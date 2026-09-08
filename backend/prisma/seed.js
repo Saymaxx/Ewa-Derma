@@ -88,7 +88,7 @@ async function main() {
             data: {
                 clinicName: 'Ewa Derma Clinic',
                 address: '6th Floor, Unit No. 10, The Millennium Place, near Lulu Mall, Golf City, Sector B, Ansal API, Lucknow, Uttar Pradesh 226030',
-                contactNumber: '0120-5244840',
+                contactNumber: '+91 9120854977',
                 email: null,
                 gstNumber: null,
                 openingTime: '10:00',
@@ -109,7 +109,7 @@ async function main() {
             firstName: 'Clinic',
             lastName: 'Administrator',
             role: client_1.RoleName.ADMIN,
-            phone: '0120-5244840',
+            phone: '+91 9120854977',
         },
         {
             email: 'doctor@ewaderma.com',
@@ -149,7 +149,7 @@ async function main() {
             firstName: 'Front Desk',
             lastName: 'Receptionist',
             role: client_1.RoleName.RECEPTIONIST,
-            phone: '0120-5244840',
+            phone: '+91 9120854977',
         },
         {
             email: 'inventory@ewaderma.com',

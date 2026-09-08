@@ -12,7 +12,7 @@ describe('AdminService', () => {
     id: 'setting-1',
     clinicName: 'Ewa Derma Clinic',
     address: 'Bangalore',
-    contactNumber: '+91 98765 43210',
+    contactNumber: '+91 9120854977',
     email: 'contact@ewaderma.com',
     gstNumber: '29ABCDE1234F1Z5',
     taxRate: 18.0,

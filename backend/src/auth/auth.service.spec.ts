@@ -77,7 +77,7 @@ describe('AuthService', () => {
         passwordHash,
         firstName: 'Clinic',
         lastName: 'Admin',
-        phoneNumber: '0120-5244840',
+        phoneNumber: '+91 9120854977',
         isActive: true,
         userRoles: [{ role: { name: RoleName.ADMIN } }],
         doctor: null,

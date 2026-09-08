@@ -321,7 +321,7 @@ export default function ClinicSettingsPage() {
                 <Input
                   value={formData.contactNumber}
                   onChange={(e) => setFormData({ ...formData, contactNumber: e.target.value })}
-                  placeholder="+91 98765 43210"
+                  placeholder="+91 9120854977"
                   leftIcon={<Phone className="w-4 h-4 text-text-muted" />}
                   required
                 />

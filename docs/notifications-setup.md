@@ -38,7 +38,7 @@ All dispatches — whether successful or failed — are logged in the PostgreSQL
 - **Language**: `en` (English)
 - **Header**: *None*
 - **Body Text**:
-  > `Welcome to Ewa Derma Clinic, {{1}}! Your registration is confirmed. Patient ID: {{2}}. For appointments, call 0120-5244840.`
+  > `Welcome to Ewa Derma Clinic, {{1}}! Your registration is confirmed. Patient ID: {{2}}. For appointments, call +91 9120854977.`
 - **Variables**:
   - `{{1}}` = Patient Full Name (e.g. "Rahul Sharma")
   - `{{2}}` = Clinic Patient ID (e.g. "P-1001")

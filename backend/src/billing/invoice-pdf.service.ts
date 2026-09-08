@@ -312,7 +312,7 @@ export class InvoicePdfService {
       color: surfaceGray,
     });
 
-    page.drawText('Thank you for choosing Ewa Derma Clinic! For billing queries, contact 0120-5244840.', {
+    page.drawText('Thank you for choosing Ewa Derma Clinic! For billing queries, contact +91 9120854977.', {
       x: 35,
       y: 15,
       size: 8,

@@ -67,7 +67,7 @@ describe('WhatsAppAdapter', () => {
 
     const result = await adapter.send({
       recipient: '9876543210',
-      content: 'Welcome to Ewa Derma Clinic, Rahul Sharma! Your registration is confirmed. Patient ID: P-1001. For appointments, call 0120-5244840.',
+      content: 'Welcome to Ewa Derma Clinic, Rahul Sharma! Your registration is confirmed. Patient ID: P-1001. For appointments, call +91 9120854977.',
       templateName: 'patient_registration_confirmation',
       templateLanguage: 'en',
       templateParameters: ['Rahul Sharma', 'P-1001'],

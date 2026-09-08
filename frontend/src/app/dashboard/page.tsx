@@ -505,7 +505,7 @@ export default function DashboardPage() {
             <div className="grid grid-cols-2 gap-3 pt-2 border-t border-surface-border">
               <div className="flex items-center gap-2 text-xs text-text-secondary">
                 <Phone className="w-4 h-4 text-primary shrink-0" />
-                <span>0120-5244840</span>
+                <span>+91 9120854977</span>
               </div>
 
               <div className="flex items-center gap-2 text-xs text-text-secondary">

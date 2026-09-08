@@ -20,7 +20,7 @@ describe('PdfService', () => {
     const sampleData = {
       clinicName: 'Ewa Derma Clinic',
       clinicAddress: 'Golf City, Sector B, Ansal API, Lucknow, UP 226030',
-      clinicPhone: '0120-5244840',
+      clinicPhone: '+91 9120854977',
       prescriptionCode: 'RX-3001',
       version: 1,
       date: '01 Sept 2026',
