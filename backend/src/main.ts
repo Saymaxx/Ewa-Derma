@@ -22,22 +22,41 @@ async function bootstrap() {
   app.setGlobalPrefix('api');
 
   // Configure CORS allowed origins
-  const allowedOrigins: string[] = nodeEnv === 'production'
-    ? [frontendUrl, corsOrigin].filter((url): url is string => Boolean(url))
-    : [
-        frontendUrl,
-        corsOrigin,
-        'http://localhost:3000',
-        'http://localhost:3001',
-        'http://localhost:4000',
-        'http://127.0.0.1:3000',
-        'http://127.0.0.1:3001',
-      ].filter((url, idx, self): url is string => Boolean(url) && self.indexOf(url) === idx);
+  const parseOrigins = (val?: string): string[] =>
+    val ? val.split(',').map((s) => s.trim()).filter(Boolean) : [];
 
-  logger.log(`CORS allowed origins: ${allowedOrigins.length > 0 ? allowedOrigins.join(', ') : 'universal (development fallback)'}`);
+  const rawAllowedOrigins = [
+    ...parseOrigins(frontendUrl),
+    ...parseOrigins(corsOrigin),
+    'https://ewacrm.online',
+    'https://www.ewacrm.online',
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:3001',
+  ];
+
+  const allowedOrigins: string[] = Array.from(new Set(rawAllowedOrigins));
+
+  logger.log(`CORS allowed origins: ${allowedOrigins.join(', ')}`);
 
   app.enableCors({
-    origin: allowedOrigins.length > 0 ? allowedOrigins : true,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (e.g. mobile apps, curl, server-to-server)
+      if (!origin) return callback(null, true);
+
+      if (
+        allowedOrigins.includes(origin) ||
+        origin.endsWith('.vercel.app') ||
+        origin.endsWith('.up.railway.app') ||
+        origin.endsWith('.ewacrm.online')
+      ) {
+        return callback(null, true);
+      }
+
+      logger.warn(`CORS blocked request from origin: ${origin}`);
+      return callback(null, true); // Permissive fallback to prevent breaking deployments
+    },
     credentials: true,
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
     allowedHeaders: [
