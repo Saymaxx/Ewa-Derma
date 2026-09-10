@@ -71,6 +71,16 @@ export class CreateConsultationDto {
   @IsString()
   doctorNotes?: string;
 
+  @ApiProperty({ example: 'https://storage.googleapis.com/.../before.webp', required: false })
+  @IsOptional()
+  @IsString()
+  beforeImageUrl?: string;
+
+  @ApiProperty({ example: 'https://storage.googleapis.com/.../after.webp', required: false })
+  @IsOptional()
+  @IsString()
+  afterImageUrl?: string;
+
   @ApiProperty({ example: '2026-09-15', required: false, description: 'Follow-up date (YYYY-MM-DD)' })
   @IsOptional()
   @IsDateString({}, { message: 'Follow up date must be a valid ISO date' })

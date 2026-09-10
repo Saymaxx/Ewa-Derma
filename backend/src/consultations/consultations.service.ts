@@ -61,6 +61,8 @@ export class ConsultationsService {
           clinicalFindings: dto.clinicalFindings?.trim() || null,
           treatmentPlan: dto.treatmentPlan?.trim() || null,
           doctorNotes: dto.doctorNotes?.trim() || null,
+          beforeImageUrl: dto.beforeImageUrl || null,
+          afterImageUrl: dto.afterImageUrl || null,
           followUpDate: followUpDateObj,
           diagnoses: dto.diagnoses && dto.diagnoses.length > 0
             ? {

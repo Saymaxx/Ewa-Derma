@@ -78,9 +78,20 @@ export class CreatePrescriptionDto {
   @IsDateString({}, { message: 'Follow up date must be a valid ISO date' })
   followUpDate?: string;
 
-  @ApiProperty({ type: [CreatePrescriptionItemDto] })
+  @ApiProperty({ example: 'DIGITAL', enum: ['DIGITAL', 'HANDWRITTEN_SCAN', 'HYBRID'], required: false })
+  @IsOptional()
+  @IsString()
+  rxType?: string;
+
+  @ApiProperty({ example: 'https://storage.googleapis.com/.../rx-scan.webp', required: false })
+  @IsOptional()
+  @IsString()
+  scanImageUrl?: string;
+
+  @ApiProperty({ type: [CreatePrescriptionItemDto], required: false })
+  @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => CreatePrescriptionItemDto)
-  items: CreatePrescriptionItemDto[];
+  items?: CreatePrescriptionItemDto[];
 }

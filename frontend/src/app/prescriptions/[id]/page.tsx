@@ -27,7 +27,10 @@ import {
   Loader2,
   Mail,
   MessageSquare,
+  Camera,
+  ZoomIn,
 } from 'lucide-react';
+import { ImageLightboxModal } from '@/components/ui/ImageLightboxModal';
 
 interface PrescriptionItemRow {
   medicineId?: string;
@@ -50,6 +53,7 @@ export default function PrescriptionDetailPage() {
   const [prescription, setPrescription] = useState<any>(null);
   const [versions, setVersions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
 
   // Revision Modal State
   const [isRevisionModalOpen, setIsRevisionModalOpen] = useState(false);
@@ -310,6 +314,41 @@ export default function PrescriptionDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column: Medications Table & Advice (2 cols) */}
         <div className="lg:col-span-2 space-y-6">
+          {/* Handwritten Prescription Slip Card */}
+          {prescription.scanImageUrl && (
+            <Card accentTop className="border-amber-200 bg-amber-50/40">
+              <CardHeader className="flex flex-row items-center justify-between pb-3">
+                <div className="flex items-center gap-2 text-amber-900">
+                  <Camera className="w-5 h-5 text-amber-700" />
+                  <CardTitle className="text-sm">Doctor&apos;s Handwritten Prescription Slip</CardTitle>
+                </div>
+                <Badge variant="accent" size="sm">Handwritten Scan</Badge>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-xs text-amber-800">
+                  Attached scanned physical prescription pad. Click the preview to open high-resolution zoom viewer.
+                </p>
+                <div
+                  onClick={() => setLightboxImage(prescription.scanImageUrl)}
+                  className="cursor-pointer group relative max-w-md rounded-xl border border-amber-300 overflow-hidden bg-white p-1.5 hover:border-accent transition-all shadow-2xs"
+                >
+                  <div className="relative h-60 w-full flex items-center justify-center bg-gray-100 rounded-lg overflow-hidden">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={prescription.scanImageUrl}
+                      alt="Handwritten Prescription Slip"
+                      className="w-full h-full object-contain"
+                    />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 text-white font-bold text-xs backdrop-blur-[1px]">
+                      <ZoomIn className="w-5 h-5" />
+                      <span>Click to View Fullscreen Scan</span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <Card accentTop>
             <CardHeader>
               <CardTitle>Prescribed Medications ({prescription.items?.length || 0})</CardTitle>
@@ -582,6 +621,16 @@ export default function PrescriptionDetailPage() {
           </div>
         </form>
       </Modal>
+
+      {/* Handwritten Prescription Fullscreen Lightbox Viewer */}
+      <ImageLightboxModal
+        isOpen={Boolean(lightboxImage)}
+        onClose={() => setLightboxImage(null)}
+        imageUrl={lightboxImage}
+        title={`Handwritten Prescription #${prescription.prescriptionCode}`}
+        categoryBadge="Handwritten Slip"
+        subtitle={`Patient: ${prescription.patient?.firstName} ${prescription.patient?.lastName} • Dr. ${prescription.doctor?.user?.firstName} ${prescription.doctor?.user?.lastName}`}
+      />
     </div>
   );
 }

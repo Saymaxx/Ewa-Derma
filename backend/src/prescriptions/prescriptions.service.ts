@@ -49,9 +49,11 @@ export class PrescriptionsService {
         doctorId: consultation.doctorId,
         version: 1,
         status: PrescriptionStatus.ACTIVE,
+        rxType: dto.rxType || (dto.scanImageUrl ? 'HANDWRITTEN_SCAN' : 'DIGITAL'),
+        scanImageUrl: dto.scanImageUrl || null,
         generalAdvice: dto.generalAdvice?.trim() || null,
         followUpDate: followUpDateObj,
-        items: {
+        items: dto.items && dto.items.length > 0 ? {
           create: dto.items.map((item) => ({
             medicineId: item.medicineId || null,
             medicineName: item.medicineName.trim(),
@@ -63,7 +65,7 @@ export class PrescriptionsService {
             instructions: item.instructions?.trim() || null,
             isDispensed: false, // Stock untouched in Phase 3
           })),
-        },
+        } : undefined,
       },
       include: {
         items: true,

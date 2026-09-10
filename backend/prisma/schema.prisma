@@ -410,6 +410,8 @@ model Consultation {
   clinicalFindings String?   @map("clinical_findings")
   treatmentPlan    String?   @map("treatment_plan")
   doctorNotes      String?   @map("doctor_notes") // Private to doctor/admin
+  beforeImageUrl   String?   @map("before_image_url")
+  afterImageUrl    String?   @map("after_image_url")
   followUpDate     DateTime? @map("follow_up_date") @db.Date
   createdAt        DateTime  @default(now()) @map("created_at")
   updatedAt        DateTime  @updatedAt @map("updated_at")
@@ -466,6 +468,8 @@ model Prescription {
   version              Int                @default(1)
   parentPrescriptionId String?            @map("parent_prescription_id")
   status               PrescriptionStatus @default(ACTIVE)
+  rxType               String             @default("DIGITAL") @map("rx_type") // DIGITAL, HANDWRITTEN_SCAN, HYBRID
+  scanImageUrl         String?            @map("scan_image_url")
   pdfUrl               String?            @map("pdf_url")
   generalAdvice        String?            @map("general_advice")
   followUpDate         DateTime?          @map("follow_up_date") @db.Date

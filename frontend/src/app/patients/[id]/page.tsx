@@ -41,9 +41,13 @@ import {
   Edit2,
   Trash2,
   AlertTriangle,
+  Camera,
+  ZoomIn,
+  Image as ImageIcon,
 } from 'lucide-react';
 import CreateInvoiceModal from '@/components/billing/CreateInvoiceModal';
 import InvoiceDetailModal from '@/components/billing/InvoiceDetailModal';
+import { ImageLightboxModal } from '@/components/ui/ImageLightboxModal';
 
 export default function PatientProfilePage() {
   const params = useParams();
@@ -62,6 +66,11 @@ export default function PatientProfilePage() {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isCreateInvoiceOpen, setIsCreateInvoiceOpen] = useState(false);
   const [downloadingRxId, setDownloadingRxId] = useState<string | null>(null);
+
+  // Lightbox Zoom Modal State
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+  const [lightboxTitle, setLightboxTitle] = useState('');
+  const [lightboxBadge, setLightboxBadge] = useState<string | undefined>(undefined);
 
   // Edit Patient State
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -584,6 +593,63 @@ export default function PatientProfilePage() {
                         </div>
                       )}
 
+                      {/* Clinical Photography (Before & After Photos) */}
+                      {(c.beforeImageUrl || c.afterImageUrl) && (
+                        <div className="p-3.5 rounded-xl bg-primary/5 border border-primary/20 space-y-2.5">
+                          <div className="flex items-center gap-1.5 font-bold text-text-primary text-[11px] uppercase tracking-wider">
+                            <Camera className="w-3.5 h-3.5 text-primary" />
+                            <span>Clinical Photography & Progress Photos</span>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {c.beforeImageUrl && (
+                              <div
+                                onClick={() => {
+                                  setLightboxImage(c.beforeImageUrl);
+                                  setLightboxTitle(`Before Photo — ${new Date(c.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`);
+                                  setLightboxBadge('Before Treatment');
+                                }}
+                                className="cursor-pointer group relative rounded-lg border border-surface-border overflow-hidden bg-white p-1 hover:border-primary transition-all shadow-2xs"
+                              >
+                                <div className="relative h-44 w-full flex items-center justify-center bg-gray-100 rounded overflow-hidden">
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img src={c.beforeImageUrl} alt="Before Treatment" className="w-full h-full object-contain" />
+                                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 text-white font-bold text-xs backdrop-blur-[1px]">
+                                    <ZoomIn className="w-4 h-4" />
+                                    <span>Click to Zoom</span>
+                                  </div>
+                                  <span className="absolute top-1.5 left-1.5 bg-blue-600 text-white text-[9px] font-bold px-2 py-0.5 rounded-full shadow-xs">
+                                    Before Treatment
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+
+                            {c.afterImageUrl && (
+                              <div
+                                onClick={() => {
+                                  setLightboxImage(c.afterImageUrl);
+                                  setLightboxTitle(`After Photo — ${new Date(c.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`);
+                                  setLightboxBadge('After Treatment');
+                                }}
+                                className="cursor-pointer group relative rounded-lg border border-surface-border overflow-hidden bg-white p-1 hover:border-primary transition-all shadow-2xs"
+                              >
+                                <div className="relative h-44 w-full flex items-center justify-center bg-gray-100 rounded overflow-hidden">
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img src={c.afterImageUrl} alt="After Treatment" className="w-full h-full object-contain" />
+                                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 text-white font-bold text-xs backdrop-blur-[1px]">
+                                    <ZoomIn className="w-4 h-4" />
+                                    <span>Click to Zoom</span>
+                                  </div>
+                                  <span className="absolute top-1.5 left-1.5 bg-emerald-600 text-white text-[9px] font-bold px-2 py-0.5 rounded-full shadow-xs">
+                                    After Treatment
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
                       {/* Treatment Plan */}
                       {c.treatmentPlan && (
                         <div>
@@ -645,6 +711,11 @@ export default function PatientProfilePage() {
                           >
                             {rx.status}
                           </Badge>
+                          {rx.scanImageUrl && (
+                            <Badge variant="accent" size="sm">
+                              📷 Handwritten Scan
+                            </Badge>
+                          )}
                         </div>
 
                         <div className="flex items-center gap-2">
@@ -665,11 +736,40 @@ export default function PatientProfilePage() {
                         </div>
                       </div>
 
-                      <div className="space-y-1">
+                      <div className="space-y-2">
                         <span className="text-text-muted text-[11px]">
                           Issued by <strong>Dr. {rx.doctor?.user?.firstName} {rx.doctor?.user?.lastName}</strong> on{' '}
                           {new Date(rx.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                         </span>
+
+                        {/* Handwritten Prescription Slip Thumbnail */}
+                        {rx.scanImageUrl && (
+                          <div className="p-3 rounded-xl bg-amber-50/60 border border-amber-200 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-amber-900 text-xs flex items-center gap-1.5">
+                                <Camera className="w-3.5 h-3.5 text-amber-700" />
+                                <span>Attached Handwritten Prescription Pad Slip</span>
+                              </span>
+                            </div>
+                            <div
+                              onClick={() => {
+                                setLightboxImage(rx.scanImageUrl);
+                                setLightboxTitle(`Handwritten Prescription #${rx.prescriptionCode}`);
+                                setLightboxBadge('Prescription Pad Scan');
+                              }}
+                              className="cursor-pointer group relative max-w-xs rounded-lg border border-amber-300 overflow-hidden bg-white p-1 hover:border-accent transition-all shadow-2xs"
+                            >
+                              <div className="relative h-36 w-full flex items-center justify-center bg-gray-100 rounded overflow-hidden">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={rx.scanImageUrl} alt="Handwritten Rx" className="w-full h-full object-contain" />
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 text-white font-bold text-xs backdrop-blur-[1px]">
+                                  <ZoomIn className="w-4 h-4" />
+                                  <span>Click to Zoom</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
 
                         {rx.items && rx.items.length > 0 && (
                           <div className="pt-2">
@@ -991,6 +1091,16 @@ export default function PatientProfilePage() {
           </div>
         </div>
       </Modal>
+
+      {/* High-Resolution Clinical Photo & Scan Lightbox Viewer */}
+      <ImageLightboxModal
+        isOpen={Boolean(lightboxImage)}
+        onClose={() => setLightboxImage(null)}
+        imageUrl={lightboxImage}
+        title={lightboxTitle}
+        categoryBadge={lightboxBadge}
+        subtitle={`Patient: ${patient?.firstName} ${patient?.lastName} (${patient?.patientCode})`}
+      />
     </div>
   );
 }
