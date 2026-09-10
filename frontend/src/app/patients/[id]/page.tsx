@@ -94,7 +94,43 @@ export default function PatientProfilePage() {
   // Delete Patient State
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isDeleteSubmitting, setIsDeleteSubmitting] = useState(false);
+  const [deletingMediaKey, setDeletingMediaKey] = useState<string | null>(null);
 
+  const handleDeleteConsultationImage = async (e: React.MouseEvent, consultationId: string, type: 'before' | 'after') => {
+    e.stopPropagation();
+    if (!window.confirm(`Are you sure you want to permanently delete this ${type} clinical photo?`)) {
+      return;
+    }
+    const key = `consultation-${consultationId}-${type}`;
+    setDeletingMediaKey(key);
+    try {
+      await api.delete(`/consultations/${consultationId}/images/${type}`);
+      showToast(`${type === 'before' ? 'Before' : 'After'} photo deleted successfully`, 'success', 'Photo Deleted');
+      fetchPatientData();
+    } catch (err: any) {
+      showToast(err.response?.data?.error?.message || 'Failed to delete photo', 'error');
+    } finally {
+      setDeletingMediaKey(null);
+    }
+  };
+
+  const handleDeletePrescriptionScan = async (e: React.MouseEvent, prescriptionId: string) => {
+    e.stopPropagation();
+    if (!window.confirm('Are you sure you want to permanently delete this handwritten prescription scan slip?')) {
+      return;
+    }
+    const key = `prescription-${prescriptionId}`;
+    setDeletingMediaKey(key);
+    try {
+      await api.delete(`/prescriptions/${prescriptionId}/scan-image`);
+      showToast('Prescription slip photo deleted successfully', 'success', 'Scan Deleted');
+      fetchPatientData();
+    } catch (err: any) {
+      showToast(err.response?.data?.error?.message || 'Failed to delete scan', 'error');
+    } finally {
+      setDeletingMediaKey(null);
+    }
+  };
 
   const handleDownloadRxPdf = async (rxId: string, rxCode?: string) => {
     setDownloadingRxId(rxId);
@@ -620,6 +656,21 @@ export default function PatientProfilePage() {
                                   <span className="absolute top-1.5 left-1.5 bg-blue-600 text-white text-[9px] font-bold px-2 py-0.5 rounded-full shadow-xs">
                                     Before Treatment
                                   </span>
+                                  {isPrivilegedDoctor && (
+                                    <button
+                                      type="button"
+                                      title="Delete this Before photo"
+                                      disabled={deletingMediaKey === `consultation-${c.id}-before`}
+                                      onClick={(e) => handleDeleteConsultationImage(e, c.id, 'before')}
+                                      className="absolute top-1.5 right-1.5 z-10 p-1.5 rounded-full bg-red-600/90 hover:bg-red-700 text-white shadow-xs transition-all hover:scale-110"
+                                    >
+                                      {deletingMediaKey === `consultation-${c.id}-before` ? (
+                                        <Loader2 className="w-3 h-3 animate-spin" />
+                                      ) : (
+                                        <Trash2 className="w-3 h-3" />
+                                      )}
+                                    </button>
+                                  )}
                                 </div>
                               </div>
                             )}
@@ -643,6 +694,21 @@ export default function PatientProfilePage() {
                                   <span className="absolute top-1.5 left-1.5 bg-emerald-600 text-white text-[9px] font-bold px-2 py-0.5 rounded-full shadow-xs">
                                     After Treatment
                                   </span>
+                                  {isPrivilegedDoctor && (
+                                    <button
+                                      type="button"
+                                      title="Delete this After photo"
+                                      disabled={deletingMediaKey === `consultation-${c.id}-after`}
+                                      onClick={(e) => handleDeleteConsultationImage(e, c.id, 'after')}
+                                      className="absolute top-1.5 right-1.5 z-10 p-1.5 rounded-full bg-red-600/90 hover:bg-red-700 text-white shadow-xs transition-all hover:scale-110"
+                                    >
+                                      {deletingMediaKey === `consultation-${c.id}-after` ? (
+                                        <Loader2 className="w-3 h-3 animate-spin" />
+                                      ) : (
+                                        <Trash2 className="w-3 h-3" />
+                                      )}
+                                    </button>
+                                  )}
                                 </div>
                               </div>
                             )}
@@ -758,6 +824,22 @@ export default function PatientProfilePage() {
                                 <Camera className="w-3.5 h-3.5 text-amber-700" />
                                 <span>Attached Handwritten Prescription Pad Slip</span>
                               </span>
+                              {isPrivilegedDoctor && (
+                                <button
+                                  type="button"
+                                  title="Delete handwritten prescription scan"
+                                  disabled={deletingMediaKey === `prescription-${rx.id}`}
+                                  onClick={(e) => handleDeletePrescriptionScan(e, rx.id)}
+                                  className="text-[11px] text-red-600 hover:text-red-800 flex items-center gap-1 font-semibold hover:underline"
+                                >
+                                  {deletingMediaKey === `prescription-${rx.id}` ? (
+                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="w-3 h-3" />
+                                  )}
+                                  <span>Remove Scan</span>
+                                </button>
+                              )}
                             </div>
                             <div
                               onClick={() => {

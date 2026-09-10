@@ -25,6 +25,12 @@ import {
   Loader2,
   CheckCircle2,
   ImageIcon,
+  HardDrive,
+  Trash2,
+  RefreshCw,
+  Sparkles,
+  Database,
+  AlertTriangle,
 } from 'lucide-react';
 
 const DAYS_OF_WEEK = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -61,6 +67,43 @@ export default function ClinicSettingsPage() {
     'Sat',
   ]);
 
+  // Storage Stats State
+  const [storageStats, setStorageStats] = useState<any>(null);
+  const [isLoadingStorage, setIsLoadingStorage] = useState(false);
+  const [cleanupMonths, setCleanupMonths] = useState(24);
+  const [isCleaningUp, setIsCleaningUp] = useState(false);
+
+  const fetchStorageStats = async () => {
+    setIsLoadingStorage(true);
+    try {
+      const res = await api.get('/admin/storage-stats');
+      setStorageStats(res.data?.data || res.data);
+    } catch {
+      // ignore
+    } finally {
+      setIsLoadingStorage(false);
+    }
+  };
+
+  const handleBulkCleanup = async () => {
+    const monthsText = cleanupMonths === 12 ? '1 year (12 months)' : cleanupMonths === 24 ? '2 years (24 months)' : `${cleanupMonths} months`;
+    if (!window.confirm(`⚠️ WARNING: Are you sure you want to permanently delete all clinical photos & prescription scans older than ${monthsText}?\n\nThis action cannot be undone.`)) {
+      return;
+    }
+
+    setIsCleaningUp(true);
+    try {
+      const res = await api.post('/admin/storage-cleanup', { olderThanMonths: cleanupMonths });
+      const data = res.data?.data || res.data;
+      showToast(data.message || `Cleaned up ${data.totalCleared} photos`, 'success', 'Storage Cleaned Up');
+      fetchStorageStats();
+    } catch (err: any) {
+      showToast(err.response?.data?.error?.message || 'Failed to cleanup storage', 'error');
+    } finally {
+      setIsCleaningUp(false);
+    }
+  };
+
   // Load clinic settings
   useEffect(() => {
     const fetchSettings = async () => {
@@ -96,6 +139,7 @@ export default function ClinicSettingsPage() {
 
     if (hasRole('ADMIN')) {
       fetchSettings();
+      fetchStorageStats();
     } else {
       setIsLoading(false);
     }
@@ -456,6 +500,148 @@ export default function ClinicSettingsPage() {
                     </button>
                   );
                 })}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 4. MEDIA STORAGE & AUTO-CLEANUP MANAGEMENT (ADMIN ONLY) */}
+        <Card accentTop className="border-primary/20 bg-surface">
+          <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-surface-border/70 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold">
+                <HardDrive className="w-5 h-5" />
+              </div>
+              <div>
+                <CardTitle className="text-base">Media Storage &amp; Auto-Cleanup Management</CardTitle>
+                <p className="text-xs text-text-muted mt-0.5">
+                  Monitor clinical photo storage and purge old records past your retention window
+                </p>
+              </div>
+            </div>
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={fetchStorageStats}
+              disabled={isLoadingStorage}
+              leftIcon={<RefreshCw className={`w-3.5 h-3.5 ${isLoadingStorage ? 'animate-spin' : ''}`} />}
+            >
+              Refresh Storage Stats
+            </Button>
+          </CardHeader>
+
+          <CardContent className="space-y-6 pt-5">
+            {/* 3 Metric Summary Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Card 1: Total Photos */}
+              <div className="p-4 rounded-xl bg-surface-raised border border-surface-border space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-text-secondary flex items-center gap-1.5">
+                    <ImageIcon className="w-4 h-4 text-primary" /> Total Clinical Photos
+                  </span>
+                  <Badge variant="primary" size="sm">
+                    {storageStats?.estimatedSizeMB || 0} MB
+                  </Badge>
+                </div>
+                <div className="text-2xl font-bold text-text-primary">
+                  {storageStats?.totalPhotos?.toLocaleString() || 0}{' '}
+                  <span className="text-xs font-normal text-text-muted">items stored</span>
+                </div>
+                <p className="text-[11px] text-text-muted">
+                  Auto-compressed WebP format (~150 KB per photo)
+                </p>
+              </div>
+
+              {/* Card 2: Storage Utilization */}
+              <div className="p-4 rounded-xl bg-surface-raised border border-surface-border space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-text-secondary flex items-center gap-1.5">
+                    <Database className="w-4 h-4 text-emerald-600" /> Storage Capacity (Railway DB)
+                  </span>
+                  <Badge variant="success" size="sm">
+                    {storageStats?.usedPercentage || 0}% Used
+                  </Badge>
+                </div>
+                <div className="text-2xl font-bold text-text-primary">
+                  {storageStats?.estimatedSizeMB || 0}{' '}
+                  <span className="text-xs font-normal text-text-muted">/ 5,000 MB</span>
+                </div>
+                {/* Progress bar */}
+                <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                  <div
+                    className="bg-primary h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${Math.min(100, Math.max(2, storageStats?.usedPercentage || 0))}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Card 3: Photo Categories */}
+              <div className="p-4 rounded-xl bg-surface-raised border border-surface-border space-y-2">
+                <span className="text-xs font-semibold text-text-secondary block">
+                  Category Breakdown
+                </span>
+                <div className="space-y-1.5 text-xs text-text-primary">
+                  <div className="flex justify-between items-center">
+                    <span className="text-text-muted">Before Photos:</span>
+                    <span className="font-bold">{storageStats?.beforePhotosCount || 0}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-text-muted">After Photos:</span>
+                    <span className="font-bold">{storageStats?.afterPhotosCount || 0}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-text-muted">Prescription Scans:</span>
+                    <span className="font-bold">{storageStats?.prescriptionScansCount || 0}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* One-Click Automated Retention Cleanup Tool */}
+            <div className="p-5 rounded-2xl bg-amber-50/70 border border-amber-200/80 space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-lg bg-amber-100 text-amber-800 shrink-0 mt-0.5">
+                  <AlertTriangle className="w-4 h-4" />
+                </div>
+                <div className="space-y-1">
+                  <h4 className="text-xs font-bold text-amber-900 uppercase tracking-wider">
+                    Automated Media Retention &amp; Bulk Storage Purge
+                  </h4>
+                  <p className="text-xs text-amber-800">
+                    Purge old clinical photos and prescription scans past your legal retention window to permanently reclaim database space.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2 border-t border-amber-200/60">
+                <div className="flex items-center gap-3">
+                  <label className="text-xs font-semibold text-amber-950 shrink-0">
+                    Purge photos older than:
+                  </label>
+                  <select
+                    value={cleanupMonths}
+                    onChange={(e) => setCleanupMonths(Number(e.target.value))}
+                    className="px-3 py-1.5 text-xs rounded-lg border border-amber-300 bg-white font-medium text-amber-950 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                  >
+                    <option value={12}>1 Year (12 months)</option>
+                    <option value={24}>2 Years (24 months)</option>
+                    <option value={36}>3 Years (36 months)</option>
+                    <option value={60}>5 Years (60 months)</option>
+                  </select>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="danger"
+                  size="sm"
+                  onClick={handleBulkCleanup}
+                  disabled={isCleaningUp || !storageStats?.totalPhotos}
+                  leftIcon={isCleaningUp ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                >
+                  {isCleaningUp ? 'Purging Photos...' : 'Purge Old Media Now'}
+                </Button>
               </div>
             </div>
           </CardContent>

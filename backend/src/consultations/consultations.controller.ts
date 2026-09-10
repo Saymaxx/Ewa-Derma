@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Delete,
   Param,
   Body,
 } from '@nestjs/common';
@@ -55,5 +56,20 @@ export class ConsultationsController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.consultationsService.findOne(id, user.roles as RoleName[]);
+  }
+
+  @Delete(':id/images/:type')
+  @Roles(RoleName.ADMIN, RoleName.DOCTOR)
+  @ApiOperation({ summary: 'Delete Before or After clinical photo from consultation' })
+  @ApiResponse({ status: 200, description: 'Photo deleted successfully' })
+  async deleteImage(
+    @Param('id') id: string,
+    @Param('type') type: 'before' | 'after' | 'both',
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.consultationsService.deleteImage(id, type, {
+      id: user.id,
+      email: user.email,
+    });
   }
 }

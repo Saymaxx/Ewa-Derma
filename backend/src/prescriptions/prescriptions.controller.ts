@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Delete,
   Param,
   Body,
   Res,
@@ -92,5 +93,19 @@ export class PrescriptionsController {
     });
 
     res.end(Buffer.from(buffer));
+  }
+
+  @Delete(':id/scan-image')
+  @Roles(RoleName.ADMIN, RoleName.DOCTOR)
+  @ApiOperation({ summary: 'Delete attached handwritten prescription scan image' })
+  @ApiResponse({ status: 200, description: 'Prescription scan image deleted successfully' })
+  async deleteScanImage(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.prescriptionsService.deleteScanImage(id, {
+      id: user.id,
+      email: user.email,
+    });
   }
 }

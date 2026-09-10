@@ -182,4 +182,32 @@ export class ConsultationsService {
 
     return consultation;
   }
+
+  async deleteImage(id: string, type: 'before' | 'after' | 'both', user: { id: string; email: string }) {
+    const consultation = await this.prisma.consultation.findUnique({ where: { id } });
+    if (!consultation) {
+      throw new NotFoundException(`Consultation not found with ID: ${id}`);
+    }
+
+    const updateData: { beforeImageUrl?: null; afterImageUrl?: null } = {};
+    if (type === 'before' || type === 'both') updateData.beforeImageUrl = null;
+    if (type === 'after' || type === 'both') updateData.afterImageUrl = null;
+
+    const updated = await this.prisma.consultation.update({
+      where: { id },
+      data: updateData,
+      include: {
+        diagnoses: true,
+        patient: true,
+        doctor: {
+          include: {
+            user: { select: { firstName: true, lastName: true } },
+          },
+        },
+      },
+    });
+
+    this.logger.log(`Deleted ${type} clinical photo from consultation ${id} by user ${user.email}`);
+    return updated;
+  }
 }

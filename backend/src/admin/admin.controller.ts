@@ -17,6 +17,7 @@ import { extname, join } from 'path';
 import { existsSync, mkdirSync } from 'fs';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { Roles } from '../common/decorators/roles.decorator';
+import { CurrentUser, AuthenticatedUser } from '../common/decorators/current-user.decorator';
 import { RoleName } from '@prisma/client';
 import { AuditLogService } from '../audit-log/audit-log.service';
 import { AdminService } from './admin.service';
@@ -204,6 +205,47 @@ export class AdminController {
     @Body() body: { password?: string },
   ) {
     return this.adminService.resetUserPassword(id, body?.password);
+  }
+
+  // ==========================================
+  // MEDIA STORAGE & RETENTION CLEANUP
+  // ==========================================
+
+  @Get('storage-stats')
+  @Roles(RoleName.ADMIN)
+  @ApiOperation({ summary: 'Get total image storage statistics and disk usage' })
+  @ApiResponse({ status: 200, description: 'Storage metrics retrieved successfully' })
+  async getStorageStats() {
+    return this.adminService.getStorageStats();
+  }
+
+  @Post('storage-cleanup')
+  @Roles(RoleName.ADMIN)
+  @ApiOperation({ summary: 'Bulk cleanup old photos past retention window (e.g. older than 12, 24, 36 months)' })
+  @ApiResponse({ status: 200, description: 'Bulk photo cleanup completed' })
+  async cleanupOldPhotos(
+    @Body() dto: { olderThanMonths: number },
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    const result = await this.adminService.cleanupOldPhotos(dto, {
+      id: user.id,
+      email: user.email,
+    });
+
+    await this.auditLogService.log({
+      userId: user.id,
+      action: 'STORAGE_CLEANUP_EXECUTED',
+      entityName: 'Storage',
+      entityId: 'media-retention',
+      details: {
+        olderThanMonths: dto.olderThanMonths,
+        clearedTotal: result.totalCleared,
+        clearedConsultations: result.clearedConsultations,
+        clearedPrescriptions: result.clearedPrescriptions,
+      },
+    });
+
+    return result;
   }
 }
 

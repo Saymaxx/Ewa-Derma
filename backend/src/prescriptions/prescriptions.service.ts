@@ -318,4 +318,32 @@ export class PrescriptionsService {
     const filename = `Prescription_${prescription.prescriptionCode}_v${prescription.version}.pdf`;
     return { buffer: pdfBuffer, filename };
   }
+
+  async deleteScanImage(id: string, user: { id: string; email: string }) {
+    const rx = await this.prisma.prescription.findUnique({
+      where: { id },
+      include: { items: true },
+    });
+    if (!rx) {
+      throw new NotFoundException(`Prescription not found with ID: ${id}`);
+    }
+
+    const newRxType = rx.items.length > 0 ? 'DIGITAL' : 'HANDWRITTEN_SCAN';
+
+    const updated = await this.prisma.prescription.update({
+      where: { id },
+      data: {
+        scanImageUrl: null,
+        rxType: newRxType,
+      },
+      include: {
+        items: true,
+        patient: true,
+        doctor: { include: { user: true } },
+      },
+    });
+
+    this.logger.log(`Deleted prescription scan image for RX ${rx.prescriptionCode} by user ${user.email}`);
+    return updated;
+  }
 }

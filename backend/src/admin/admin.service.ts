@@ -264,5 +264,130 @@ export class AdminService {
 
     return { message: 'Password reset successfully' };
   }
+
+  // ==========================================
+  // MEDIA STORAGE & RETENTION CLEANUP
+  // ==========================================
+
+  async getStorageStats() {
+    // 1. Consultations photos
+    const consultationsWithPhotos = await this.prisma.consultation.findMany({
+      where: {
+        OR: [
+          { beforeImageUrl: { not: null } },
+          { afterImageUrl: { not: null } },
+        ],
+      },
+      select: {
+        id: true,
+        beforeImageUrl: true,
+        afterImageUrl: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    let beforeCount = 0;
+    let afterCount = 0;
+    let totalConsultationBytes = 0;
+    let oldestDate: Date | null = null;
+
+    for (const c of consultationsWithPhotos) {
+      if (c.beforeImageUrl) {
+        beforeCount++;
+        totalConsultationBytes += Buffer.byteLength(c.beforeImageUrl, 'utf8');
+        if (!oldestDate || c.createdAt < oldestDate) oldestDate = c.createdAt;
+      }
+      if (c.afterImageUrl) {
+        afterCount++;
+        totalConsultationBytes += Buffer.byteLength(c.afterImageUrl, 'utf8');
+        if (!oldestDate || c.createdAt < oldestDate) oldestDate = c.createdAt;
+      }
+    }
+
+    // 2. Prescriptions scans
+    const prescriptionsWithScans = await this.prisma.prescription.findMany({
+      where: {
+        scanImageUrl: { not: null },
+      },
+      select: {
+        id: true,
+        scanImageUrl: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    let prescriptionScansCount = 0;
+    let totalPrescriptionBytes = 0;
+
+    for (const p of prescriptionsWithScans) {
+      if (p.scanImageUrl) {
+        prescriptionScansCount++;
+        totalPrescriptionBytes += Buffer.byteLength(p.scanImageUrl, 'utf8');
+        if (!oldestDate || p.createdAt < oldestDate) oldestDate = p.createdAt;
+      }
+    }
+
+    const totalPhotos = beforeCount + afterCount + prescriptionScansCount;
+    const totalBytes = totalConsultationBytes + totalPrescriptionBytes;
+    // Estimated MB
+    const estimatedSizeMB = Number((Math.max(totalBytes, totalPhotos * 150 * 1024) / (1024 * 1024)).toFixed(2));
+
+    return {
+      totalPhotos,
+      estimatedSizeMB,
+      beforePhotosCount: beforeCount,
+      afterPhotosCount: afterCount,
+      prescriptionScansCount,
+      oldestPhotoDate: oldestDate ? oldestDate.toISOString() : null,
+      storageTier: 'Railway PostgreSQL',
+      maxSafeStorageMB: 5000, // 5GB baseline
+      usedPercentage: Number(((estimatedSizeMB / 5000) * 100).toFixed(2)),
+    };
+  }
+
+  async cleanupOldPhotos(dto: { olderThanMonths: number }, user: { id: string; email: string }) {
+    const months = Math.max(1, dto.olderThanMonths || 12);
+    const cutoffDate = new Date();
+    cutoffDate.setMonth(cutoffDate.getMonth() - months);
+
+    // Find and clear old consultation photos
+    const consultationUpdate = await this.prisma.consultation.updateMany({
+      where: {
+        createdAt: { lt: cutoffDate },
+        OR: [
+          { beforeImageUrl: { not: null } },
+          { afterImageUrl: { not: null } },
+        ],
+      },
+      data: {
+        beforeImageUrl: null,
+        afterImageUrl: null,
+      },
+    });
+
+    // Find and clear old prescription scans
+    const prescriptionUpdate = await this.prisma.prescription.updateMany({
+      where: {
+        createdAt: { lt: cutoffDate },
+        scanImageUrl: { not: null },
+      },
+      data: {
+        scanImageUrl: null,
+      },
+    });
+
+    const totalCleared = consultationUpdate.count + prescriptionUpdate.count;
+
+    return {
+      message: `Successfully cleaned up ${totalCleared} photo attachments older than ${months} months.`,
+      clearedConsultations: consultationUpdate.count,
+      clearedPrescriptions: prescriptionUpdate.count,
+      totalCleared,
+      cutoffDate: cutoffDate.toISOString(),
+      olderThanMonths: months,
+    };
+  }
 }
 
