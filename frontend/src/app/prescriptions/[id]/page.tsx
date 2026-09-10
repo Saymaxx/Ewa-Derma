@@ -245,6 +245,19 @@ export default function PrescriptionDetailPage() {
               >
                 {prescription.status}
               </Badge>
+              {prescription.rxType === 'HYBRID' || (prescription.scanImageUrl && prescription.items?.length > 0) ? (
+                <Badge variant="accent" size="md">
+                  ⚡ Hybrid (Digital + Scan)
+                </Badge>
+              ) : prescription.scanImageUrl ? (
+                <Badge variant="accent" size="md">
+                  📷 Handwritten Scan
+                </Badge>
+              ) : (
+                <Badge variant="default" size="md">
+                  💻 Digital Rx
+                </Badge>
+              )}
             </div>
 
             <div className="flex flex-wrap items-center gap-x-4 text-xs text-text-secondary pt-0.5">

@@ -711,9 +711,17 @@ export default function PatientProfilePage() {
                           >
                             {rx.status}
                           </Badge>
-                          {rx.scanImageUrl && (
+                          {rx.rxType === 'HYBRID' || (rx.scanImageUrl && rx.items?.length > 0) ? (
+                            <Badge variant="accent" size="sm">
+                              ⚡ Hybrid (Digital + Scan)
+                            </Badge>
+                          ) : rx.scanImageUrl ? (
                             <Badge variant="accent" size="sm">
                               📷 Handwritten Scan
+                            </Badge>
+                          ) : (
+                            <Badge variant="default" size="sm">
+                              💻 Digital Rx
                             </Badge>
                           )}
                         </div>

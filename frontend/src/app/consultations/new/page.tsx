@@ -260,31 +260,23 @@ export default function NewConsultationPage() {
       const newConsultation = consultationRes.data.data;
       let newPrescription: any = null;
 
-      // 2. Create Prescription (Digital vs Handwritten Scan)
-      if (rxMode === 'handwritten' && handwrittenScanUrl) {
+      // 2. Create Prescription (Digital, Handwritten Scan, or Hybrid)
+      const validItems = prescriptionItems.filter((it) => it.medicineName.trim().length > 0);
+      const hasScan = !!handwrittenScanUrl;
+      const hasItems = validItems.length > 0;
+
+      if (hasScan || hasItems) {
+        const rxType = hasScan && hasItems ? 'HYBRID' : hasScan ? 'HANDWRITTEN_SCAN' : 'DIGITAL';
         const rxRes = await api.post('/prescriptions', {
           consultationId: newConsultation.id,
           patientId: appointment.patient.id,
-          rxType: 'HANDWRITTEN_SCAN',
-          scanImageUrl: handwrittenScanUrl,
-          generalAdvice,
+          rxType,
+          scanImageUrl: handwrittenScanUrl || undefined,
+          generalAdvice: generalAdvice.trim() || undefined,
           followUpDate: followUpDate || undefined,
-          items: prescriptionItems.filter((it) => it.medicineName.trim().length > 0),
+          items: validItems,
         });
         newPrescription = rxRes.data.data;
-      } else if (prescriptionItems.length > 0) {
-        const validItems = prescriptionItems.filter((it) => it.medicineName.trim().length > 0);
-        if (validItems.length > 0) {
-          const rxRes = await api.post('/prescriptions', {
-            consultationId: newConsultation.id,
-            patientId: appointment.patient.id,
-            rxType: 'DIGITAL',
-            generalAdvice,
-            followUpDate: followUpDate || undefined,
-            items: validItems,
-          });
-          newPrescription = rxRes.data.data;
-        }
       }
 
       showToast('Consultation completed and clinical records saved', 'success', 'Consultation Saved');
@@ -582,7 +574,7 @@ export default function NewConsultationPage() {
                 }`}
               >
                 <FileEdit className="w-3.5 h-3.5" />
-                <span>💻 Digital Rx (Type)</span>
+                <span>⚡ Digital &amp; Hybrid (Type + Scan)</span>
               </button>
               <button
                 type="button"
@@ -594,13 +586,13 @@ export default function NewConsultationPage() {
                 }`}
               >
                 <Camera className="w-3.5 h-3.5" />
-                <span>📷 Upload Handwritten Pad</span>
+                <span>📷 Quick Handwritten Pad Only</span>
               </button>
             </div>
           </CardHeader>
 
           <CardContent className="space-y-4">
-            {/* MODE A: HANDWRITTEN PRESCRIPTION PAD UPLOAD */}
+            {/* MODE A: HANDWRITTEN PRESCRIPTION PAD ONLY */}
             {rxMode === 'handwritten' ? (
               <div className="p-5 rounded-2xl bg-amber-50/60 border border-amber-200 space-y-3">
                 <div className="flex items-center justify-between">
@@ -626,8 +618,19 @@ export default function NewConsultationPage() {
                 />
               </div>
             ) : (
-              /* MODE B: DIGITAL PRESCRIPTION BUILDER */
+              /* MODE B: DIGITAL & HYBRID PRESCRIPTION BUILDER */
               <div className="space-y-4">
+                {/* Hybrid Mode Notification if both are present */}
+                {handwrittenScanUrl && prescriptionItems.filter((it) => it.medicineName.trim().length > 0).length > 0 && (
+                  <div className="p-3 bg-emerald-50/80 border border-emerald-200 rounded-xl flex items-center justify-between text-xs text-emerald-900 animate-in fade-in">
+                    <div className="flex items-center gap-2 font-semibold">
+                      <span className="text-base">⚡</span>
+                      <span>Hybrid Mode Active: Both digital medicine items and the attached handwritten slip scan will be saved together!</span>
+                    </div>
+                    <Badge variant="success" size="sm">Hybrid Rx</Badge>
+                  </div>
+                )}
+
                 {/* Quick Formulary Search Box */}
                 <div className="relative max-w-lg">
                   <label className="block text-xs font-semibold text-text-primary mb-1">
@@ -771,6 +774,28 @@ export default function NewConsultationPage() {
                     </Button>
                     <span className="text-[11px] text-text-muted">{prescriptionItems.length} item{prescriptionItems.length !== 1 ? 's' : ''} in routine</span>
                   </div>
+                </div>
+
+                {/* Optional Attached Handwritten Slip / Doctor Pad Photo */}
+                <div className="p-4 rounded-xl bg-amber-50/40 border border-amber-200/80 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-amber-900 text-xs flex items-center gap-1.5">
+                      <Camera className="w-3.5 h-3.5 text-amber-700" />
+                      <span>Attach Doctor&apos;s Handwritten Prescription Pad Slip (Optional)</span>
+                    </span>
+                    {handwrittenScanUrl ? (
+                      <Badge variant="accent" size="sm">Slip Photo Attached</Badge>
+                    ) : (
+                      <span className="text-[10px] text-amber-700 font-medium">Optional paper pad scan</span>
+                    )}
+                  </div>
+                  <ImageUploadDropzone
+                    label="Handwritten Prescription Pad Slip"
+                    subLabel="Upload physical prescription pad photo to attach alongside digital medicines (WebP auto-compressed)"
+                    value={handwrittenScanUrl}
+                    onChange={setHandwrittenScanUrl}
+                    folder="prescriptions"
+                  />
                 </div>
               </div>
             )}
