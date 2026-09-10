@@ -329,101 +329,126 @@ export class PdfService {
     currentY -= thHeight + 4;
 
     // Table Rows
-    data.items.forEach((item, idx) => {
-      const isEven = idx % 2 === 0;
-      const rowHeight = 32;
-
-      // Row background
+    if (!data.items || data.items.length === 0) {
+      const emptyRowHeight = 36;
       page.drawRectangle({
         x: 35,
-        y: currentY - rowHeight,
+        y: currentY - emptyRowHeight,
         width: width - 70,
-        height: rowHeight,
-        color: isEven ? surfaceGray : rgb(1, 1, 1),
+        height: emptyRowHeight,
+        color: surfaceGray,
       });
-
-      // Bottom Row Divider
       page.drawLine({
-        start: { x: 35, y: currentY - rowHeight },
-        end: { x: width - 35, y: currentY - rowHeight },
+        start: { x: 35, y: currentY - emptyRowHeight },
+        end: { x: width - 35, y: currentY - emptyRowHeight },
         thickness: 0.5,
         color: borderGray,
       });
-
-      // Col 1: Number (#)
-      page.drawText(`${idx + 1}`, {
-        x: colPos.num + 2,
-        y: currentY - 15,
-        size: 8.5,
-        font: fontBold,
-        color: primaryBlue,
-      });
-
-      // Col 2: Medicine Name (Line 1: Name, Line 2: Dosage/Strength if present)
-      const medName = item.medicineName.length > 30 ? `${item.medicineName.substring(0, 28)}...` : item.medicineName;
-      page.drawText(medName, {
+      page.drawText('Handwritten prescription / doctor slip attached. Refer to physical slip scan in patient profile.', {
         x: colPos.name,
-        y: currentY - 13,
-        size: 8.5,
-        font: fontBold,
-        color: textDark,
+        y: currentY - 22,
+        size: 8,
+        font: fontItalic,
+        color: textMuted,
       });
+      currentY -= emptyRowHeight;
+    } else {
+      data.items.forEach((item, idx) => {
+        const isEven = idx % 2 === 0;
+        const rowHeight = 32;
 
-      if (item.dosage) {
-        page.drawText(item.dosage, {
+        // Row background
+        page.drawRectangle({
+          x: 35,
+          y: currentY - rowHeight,
+          width: width - 70,
+          height: rowHeight,
+          color: isEven ? surfaceGray : rgb(1, 1, 1),
+        });
+
+        // Bottom Row Divider
+        page.drawLine({
+          start: { x: 35, y: currentY - rowHeight },
+          end: { x: width - 35, y: currentY - rowHeight },
+          thickness: 0.5,
+          color: borderGray,
+        });
+
+        // Col 1: Number (#)
+        page.drawText(`${idx + 1}`, {
+          x: colPos.num + 2,
+          y: currentY - 15,
+          size: 8.5,
+          font: fontBold,
+          color: primaryBlue,
+        });
+
+        // Col 2: Medicine Name (Line 1: Name, Line 2: Dosage/Strength if present)
+        const medName = item.medicineName.length > 30 ? `${item.medicineName.substring(0, 28)}...` : item.medicineName;
+        page.drawText(medName, {
           x: colPos.name,
-          y: currentY - 24,
-          size: 7.5,
+          y: currentY - 13,
+          size: 8.5,
+          font: fontBold,
+          color: textDark,
+        });
+
+        if (item.dosage) {
+          page.drawText(item.dosage, {
+            x: colPos.name,
+            y: currentY - 24,
+            size: 7.5,
+            font: fontRegular,
+            color: textMuted,
+          });
+        }
+
+        // Col 3: Frequency / Timing
+        const freqText = item.frequency || '-';
+        page.drawText(freqText.length > 20 ? `${freqText.substring(0, 18)}...` : freqText, {
+          x: colPos.freq,
+          y: currentY - 16,
+          size: 8,
+          font: fontBold,
+          color: primaryBlue,
+        });
+
+        // Col 4: Duration
+        const durText = item.duration || '-';
+        page.drawText(durText, {
+          x: colPos.dur,
+          y: currentY - 16,
+          size: 8,
           font: fontRegular,
-          color: textMuted,
+          color: textDark,
         });
-      }
 
-      // Col 3: Frequency / Timing
-      const freqText = item.frequency || '-';
-      page.drawText(freqText.length > 20 ? `${freqText.substring(0, 18)}...` : freqText, {
-        x: colPos.freq,
-        y: currentY - 16,
-        size: 8,
-        font: fontBold,
-        color: primaryBlue,
-      });
-
-      // Col 4: Duration
-      const durText = item.duration || '-';
-      page.drawText(durText, {
-        x: colPos.dur,
-        y: currentY - 16,
-        size: 8,
-        font: fontRegular,
-        color: textDark,
-      });
-
-      // Col 5: Route & Instructions
-      const routeText = item.route || 'Oral';
-      page.drawText(routeText, {
-        x: colPos.route,
-        y: currentY - 13,
-        size: 8,
-        font: fontBold,
-        color: textDark,
-      });
-
-      if (item.instructions) {
-        const cleanInstr = item.instructions.length > 24
-          ? `${item.instructions.substring(0, 22)}...`
-          : item.instructions;
-        page.drawText(cleanInstr, {
+        // Col 5: Route & Instructions
+        const routeText = item.route || 'Oral';
+        page.drawText(routeText, {
           x: colPos.route,
-          y: currentY - 24,
-          size: 7.5,
-          font: fontItalic,
-          color: textMuted,
+          y: currentY - 13,
+          size: 8,
+          font: fontBold,
+          color: textDark,
         });
-      }
 
-      currentY -= rowHeight;
-    });
+        if (item.instructions) {
+          const cleanInstr = item.instructions.length > 24
+            ? `${item.instructions.substring(0, 22)}...`
+            : item.instructions;
+          page.drawText(cleanInstr, {
+            x: colPos.route,
+            y: currentY - 24,
+            size: 7.5,
+            font: fontItalic,
+            color: textMuted,
+          });
+        }
+
+        currentY -= rowHeight;
+      });
+    }
 
     // =========================================================================
     // 6. GENERAL ADVICE & LIFESTYLE INSTRUCTIONS
