@@ -35,7 +35,7 @@ export const META_TEMPLATES = {
   PATIENT_REGISTRATION: {
     name: 'patient_registration_notice',
     category: 'UTILITY',
-    language: 'en_US',
+    language: 'en',
     sample: 'Your registration with Ewa Derma Clinic is confirmed. Patient Name: {{1}}, Patient ID: {{2}}. Thank you!',
   },
 } as const;
