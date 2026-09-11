@@ -156,15 +156,14 @@ export default function LoginPage() {
 
   const handleSelectRole = (roleId: string) => {
     setSelectedRole(roleId);
-    const selected = ROLE_OPTIONS.find((r) => r.id === roleId);
-    if (selected) {
-      setIdentifier(selected.email);
-      setPassword('');
-    }
+    setIdentifier('');
+    setPassword('');
   };
 
   const handleBackToRoles = () => {
     setSelectedRole(null);
+    setIdentifier('');
+    setPassword('');
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -414,7 +413,7 @@ export default function LoginPage() {
                       Sign In to {currentRoleObj?.badgeLabel} Workspace
                     </h4>
                     <p className="text-[11px] text-stone-500 font-medium">
-                      Enter your password to access your role workspace.
+                      Enter your assigned credentials to access your workspace.
                     </p>
                   </div>
 
@@ -432,7 +431,7 @@ export default function LoginPage() {
                           type="text"
                           value={identifier}
                           onChange={(e) => setIdentifier(e.target.value)}
-                          placeholder="e.g. name@ewaderma.com"
+                          placeholder="e.g. name@ewaderma.com or username"
                           required
                           className={`w-full h-10 pl-9 pr-3 rounded-xl border border-stone-300 bg-stone-50/60 text-xs sm:text-sm font-semibold text-stone-900 focus:bg-white ${currentRoleObj?.themeClass.ringColor} focus:ring-2 focus:outline-none transition-all shadow-inner`}
                         />
@@ -523,8 +522,8 @@ export default function LoginPage() {
                               <p className="text-[11px] font-bold text-stone-900 truncate">
                                 {r.badgeLabel}
                               </p>
-                              <p className="text-[9px] text-stone-500 font-mono truncate">
-                                {r.email}
+                              <p className="text-[9px] text-stone-500 font-medium truncate">
+                                {r.categoryTag}
                               </p>
                             </div>
                           </button>
