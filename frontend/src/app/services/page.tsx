@@ -20,6 +20,9 @@ import {
   Edit2,
   Trash2,
   FileText,
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
 } from 'lucide-react';
 
 const DEFAULT_CATEGORIES = [
@@ -181,17 +184,37 @@ export default function ServicesPage() {
     }
   };
 
+  const handleToggleStatus = async (svc: any) => {
+    try {
+      await api.patch(`/services/${svc.id}`, { isActive: !svc.isActive });
+      showToast(
+        `Service '${svc.name}' has been ${svc.isActive ? 'deactivated' : 'activated'}.`,
+        'success',
+        svc.isActive ? 'Service Deactivated' : 'Service Activated',
+      );
+      fetchServices();
+    } catch (err: any) {
+      showToast(getErrorMessage(err), 'error');
+    }
+  };
+
   const handleDeleteService = async () => {
     if (!deleteService) return;
     setIsDeleteSubmitting(true);
     try {
-      await api.delete(`/services/${deleteService.id}`);
-      showToast(`Service '${deleteService.name}' deactivated`, 'success', 'Service Deactivated');
+      await api.delete(`/services/${deleteService.id}`, {
+        params: { permanent: 'true' },
+      });
+      showToast(
+        `Service '${deleteService.name}' has been permanently deleted from database.`,
+        'success',
+        'Service Deleted',
+      );
       setDeleteService(null);
       fetchServices();
     } catch (err: any) {
       const msg = getErrorMessage(err);
-      showToast(msg, 'error', 'Deactivation Failed');
+      showToast(msg, 'error', 'Deletion Failed');
     } finally {
       setIsDeleteSubmitting(false);
     }
@@ -380,11 +403,28 @@ export default function ServicesPage() {
                           <Button
                             size="sm"
                             variant="ghost"
+                            title={svc.isActive ? 'Deactivate Service' : 'Activate Service'}
+                            className={svc.isActive ? 'text-amber-600 hover:bg-amber-50' : 'text-emerald-600 hover:bg-emerald-50'}
+                            leftIcon={
+                              svc.isActive ? (
+                                <XCircle className="w-3.5 h-3.5 text-amber-600" />
+                              ) : (
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                              )
+                            }
+                            onClick={() => handleToggleStatus(svc)}
+                          >
+                            {svc.isActive ? 'Deactivate' : 'Activate'}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
                             className="text-status-danger hover:bg-status-danger/10"
+                            title="Permanently Delete Service"
                             leftIcon={<Trash2 className="w-3.5 h-3.5 text-status-danger" />}
                             onClick={() => setDeleteService(svc)}
                           >
-                            Deactivate
+                            Delete
                           </Button>
                         </div>
                       )}
@@ -579,22 +619,26 @@ export default function ServicesPage() {
         </form>
       </Modal>
 
-      {/* Delete / Deactivate Service Modal */}
+      {/* Permanent Delete Service Modal */}
       <Modal
         isOpen={!!deleteService}
         onClose={() => setDeleteService(null)}
-        title="Confirm Service Deactivation"
-        description="Are you sure you want to deactivate this service from the catalog?"
+        title="Permanently Delete Service"
+        description="Are you sure you want to permanently erase this service from the catalog?"
         maxWidth="sm"
       >
         <div className="space-y-4">
           <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
-            <div className="text-xs text-red-800 space-y-1">
-              <p className="font-semibold">
-                Deactivating {deleteService?.name} (₹{deleteService?.basePrice})
+            <AlertTriangle className="w-5 h-5 text-status-danger shrink-0 mt-0.5" />
+            <div className="text-xs text-red-800 space-y-1.5">
+              <p className="font-semibold text-red-900">
+                Permanent Deletion: {deleteService?.name} (₹{Number(deleteService?.basePrice).toLocaleString('en-IN')})
               </p>
               <p>
-                This will prevent new appointment bookings and fast-track procedure logging for this service, while preserving historical invoices and patient treatment records.
+                This action is <strong className="text-red-900">irreversible</strong>. The service and its pricing configurations will be permanently removed from the system.
+              </p>
+              <p className="text-[11px] text-red-700 bg-red-100/70 p-1.5 rounded-md border border-red-200">
+                💡 <strong>Tip:</strong> If you only wish to temporarily stop offering this service without deleting it, use the <strong>Deactivate</strong> button instead.
               </p>
             </div>
           </div>
@@ -606,11 +650,11 @@ export default function ServicesPage() {
             <Button
               type="button"
               variant="primary"
-              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-600 shadow-sm"
               isLoading={isDeleteSubmitting}
               onClick={handleDeleteService}
             >
-              Confirm Deactivation
+              Permanently Delete
             </Button>
           </div>
         </div>

@@ -14,6 +14,8 @@ import { TableSkeleton } from '@/components/ui/Skeleton';
 import {
   Users,
   UserPlus,
+  UserCheck,
+  UserX,
   Search,
   ShieldCheck,
   KeyRound,
@@ -190,17 +192,37 @@ export default function StaffManagementPage() {
     }
   };
 
+  const handleToggleStatus = async (staffMember: any) => {
+    try {
+      await api.patch(`/admin/users/${staffMember.id}`, { isActive: !staffMember.isActive });
+      showToast(
+        `Staff account for ${staffMember.firstName} ${staffMember.lastName} has been ${staffMember.isActive ? 'disabled' : 'activated'}.`,
+        'success',
+        staffMember.isActive ? 'Account Disabled' : 'Account Activated',
+      );
+      fetchUsers();
+    } catch (err: any) {
+      showToast(getErrorMessage(err), 'error');
+    }
+  };
+
   const handleDeleteStaff = async () => {
     if (!deleteStaff) return;
     setIsDeleteSubmitting(true);
     try {
-      await api.delete(`/admin/users/${deleteStaff.id}`);
-      showToast(`Account for ${deleteStaff.firstName} ${deleteStaff.lastName} has been deactivated.`, 'success', 'Account Deactivated');
+      await api.delete(`/admin/users/${deleteStaff.id}`, {
+        params: { permanent: 'true' },
+      });
+      showToast(
+        `Account for ${deleteStaff.firstName} ${deleteStaff.lastName} has been permanently deleted from database.`,
+        'success',
+        'Staff Deleted',
+      );
       setDeleteStaff(null);
       fetchUsers();
     } catch (err: any) {
       const msg = getErrorMessage(err);
-      showToast(msg, 'error', 'Deactivation Failed');
+      showToast(msg, 'error', 'Deletion Failed');
     } finally {
       setIsDeleteSubmitting(false);
     }
@@ -421,15 +443,33 @@ export default function StaffManagementPage() {
                               Password
                             </Button>
                             {!isSelf && (
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="text-status-danger hover:bg-status-danger/10"
-                                leftIcon={<Trash2 className="w-3.5 h-3.5 text-status-danger" />}
-                                onClick={() => setDeleteStaff(u)}
-                              >
-                                Disable
-                              </Button>
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  title={u.isActive ? 'Disable account login' : 'Enable account login'}
+                                  leftIcon={
+                                    u.isActive ? (
+                                      <UserX className="w-3.5 h-3.5 text-amber-600" />
+                                    ) : (
+                                      <UserCheck className="w-3.5 h-3.5 text-emerald-600" />
+                                    )
+                                  }
+                                  onClick={() => handleToggleStatus(u)}
+                                >
+                                  {u.isActive ? 'Disable' : 'Enable'}
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="text-status-danger hover:bg-status-danger/10"
+                                  title="Permanently Delete Staff Account"
+                                  leftIcon={<Trash2 className="w-3.5 h-3.5 text-status-danger" />}
+                                  onClick={() => setDeleteStaff(u)}
+                                >
+                                  Delete
+                                </Button>
+                              </>
                             )}
                           </div>
                         )}
@@ -632,23 +672,26 @@ export default function StaffManagementPage() {
         </form>
       </Modal>
 
-      {/* Deactivate Staff Modal */}
+      {/* Permanent Delete Staff Modal */}
       <Modal
         isOpen={!!deleteStaff}
         onClose={() => setDeleteStaff(null)}
-        title="Confirm Account Deactivation"
-        description="Are you sure you want to disable this staff member login?"
+        title="Permanently Delete Staff Member"
+        description="Are you sure you want to permanently erase this staff record from the database?"
         maxWidth="sm"
       >
         <div className="space-y-4">
           <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
             <AlertTriangle className="w-5 h-5 text-status-danger shrink-0 mt-0.5" />
-            <div className="text-xs text-red-800 space-y-1">
-              <p className="font-semibold">
-                Deactivating {deleteStaff?.firstName} {deleteStaff?.lastName} ({deleteStaff?.email})
+            <div className="text-xs text-red-800 space-y-1.5">
+              <p className="font-semibold text-red-900">
+                Permanent Deletion: {deleteStaff?.firstName} {deleteStaff?.lastName} ({deleteStaff?.email})
               </p>
               <p>
-                This employee will immediately be blocked from logging into the portal. Past receipts and audit logs created by them remain preserved.
+                This action is <strong className="text-red-900">irreversible</strong>. The staff account and doctor assignments will be permanently removed from the system.
+              </p>
+              <p className="text-[11px] text-red-700 bg-red-100/70 p-1.5 rounded-md border border-red-200">
+                💡 <strong>Tip:</strong> If you only wish to prevent this user from logging in while retaining their history, use the <strong>Disable</strong> button instead.
               </p>
             </div>
           </div>
@@ -660,11 +703,11 @@ export default function StaffManagementPage() {
             <Button
               type="button"
               variant="primary"
-              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-600 shadow-sm"
               isLoading={isDeleteSubmitting}
               onClick={handleDeleteStaff}
             >
-              Confirm Deactivation
+              Permanently Delete
             </Button>
           </div>
         </div>

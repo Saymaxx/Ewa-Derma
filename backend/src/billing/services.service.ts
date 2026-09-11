@@ -163,25 +163,63 @@ export class ServicesService implements OnModuleInit {
     return updated;
   }
 
-  async remove(id: string, userId?: string) {
-    await this.findOne(id);
+  async remove(id: string, userId?: string, permanent = false) {
+    const service = await this.findOne(id);
 
-    const deactivated = await this.prisma.service.update({
+    if (permanent) {
+      await this.prisma.$transaction(async (tx) => {
+        // Unlink from procedure appointments
+        await tx.appointment.updateMany({
+          where: { procedureServiceId: id },
+          data: { procedureServiceId: null },
+        });
+
+        // Unlink from invoice items (invoice retains description, unitPrice, taxRate, totalPrice)
+        await tx.invoiceItem.updateMany({
+          where: { serviceId: id },
+          data: { serviceId: null },
+        });
+
+        // Delete service price histories
+        await tx.servicePrice.deleteMany({
+          where: { serviceId: id },
+        });
+
+        // Delete service permanently
+        await tx.service.delete({
+          where: { id },
+        });
+      });
+
+      if (userId) {
+        await this.auditLogService.log({
+          userId,
+          action: 'SERVICE_DELETED',
+          entityName: 'Service',
+          entityId: id,
+          details: { name: service.name, permanent: true },
+        });
+      }
+
+      return { message: `Service '${service.name}' has been permanently deleted.` };
+    }
+
+    const updated = await this.prisma.service.update({
       where: { id },
-      data: { isActive: false },
+      data: { isActive: !service.isActive ? true : false },
     });
 
     if (userId) {
       await this.auditLogService.log({
         userId,
-        action: 'SERVICE_DEACTIVATED',
+        action: updated.isActive ? 'SERVICE_ACTIVATED' : 'SERVICE_DEACTIVATED',
         entityName: 'Service',
         entityId: id,
-        details: { name: deactivated.name },
+        details: { name: updated.name, isActive: updated.isActive },
       });
     }
 
-    return deactivated;
+    return updated;
   }
 }
 

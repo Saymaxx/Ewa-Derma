@@ -40,9 +40,14 @@ export class ServicesController {
 
   @Delete(':id')
   @Roles('ADMIN')
-  async remove(@Param('id') id: string, @Req() req: any) {
+  async remove(
+    @Param('id') id: string,
+    @Query('permanent') permanent: string,
+    @Req() req: any,
+  ) {
     const userId = req.user?.id || req.user?.sub;
-    return this.servicesService.remove(id, userId);
+    const isPermanent = permanent === 'true';
+    return this.servicesService.remove(id, userId, isPermanent);
   }
 }
 

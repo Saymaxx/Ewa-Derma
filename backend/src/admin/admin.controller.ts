@@ -192,9 +192,14 @@ export class AdminController {
 
   @Delete('users/:id')
   @Roles(RoleName.ADMIN)
-  @ApiOperation({ summary: 'Deactivate staff user account (Admin only)' })
-  async deleteUser(@Param('id') id: string) {
-    return this.adminService.deleteUser(id);
+  @ApiOperation({ summary: 'Deactivate or permanently delete staff user account (Admin only)' })
+  async deleteUser(
+    @Param('id') id: string,
+    @Query('permanent') permanent?: string,
+    @CurrentUser() currentUser?: AuthenticatedUser,
+  ) {
+    const isPermanent = permanent === 'true';
+    return this.adminService.deleteUser(id, isPermanent, currentUser?.id);
   }
 
   @Post('users/:id/reset-password')

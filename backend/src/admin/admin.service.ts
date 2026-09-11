@@ -236,15 +236,101 @@ export class AdminService {
     });
   }
 
-  async deleteUser(id: string) {
-    const user = await this.prisma.user.findUnique({ where: { id } });
+  async deleteUser(id: string, permanent: boolean = false, currentUserId?: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      include: { doctor: true },
+    });
     if (!user) {
       throw new NotFoundException(`User with ID '${id}' not found.`);
     }
 
+    if (currentUserId && user.id === currentUserId) {
+      throw new BadRequestException('You cannot delete your own logged-in administrator account.');
+    }
+
+    if (permanent) {
+      await this.prisma.$transaction(async (tx) => {
+        // If user has doctor profile
+        if (user.doctor) {
+          const docId = user.doctor.id;
+
+          // Unlink invoices linked to this doctor's appointments or consultations
+          await tx.invoice.updateMany({
+            where: {
+              OR: [
+                { appointment: { doctorId: docId } },
+                { consultation: { doctorId: docId } },
+              ],
+            },
+            data: {
+              appointmentId: null,
+              consultationId: null,
+            },
+          });
+
+          // Unlink follow-ups assigned to this doctor
+          await tx.followUp.updateMany({
+            where: { doctorId: docId },
+            data: { doctorId: null },
+          });
+
+          await tx.appointmentStatusHistory.deleteMany({
+            where: { appointment: { doctorId: docId } },
+          });
+          await tx.prescriptionItem.deleteMany({
+            where: { prescription: { doctorId: docId } },
+          });
+          await tx.prescription.deleteMany({ where: { doctorId: docId } });
+          await tx.consultationNote.deleteMany({
+            where: { consultation: { doctorId: docId } },
+          });
+          await tx.diagnosis.deleteMany({
+            where: { consultation: { doctorId: docId } },
+          });
+          await tx.consultation.deleteMany({ where: { doctorId: docId } });
+          await tx.appointment.deleteMany({ where: { doctorId: docId } });
+          await tx.doctor.delete({ where: { id: docId } });
+        }
+
+        // Clean up direct user relations
+        await tx.userRole.deleteMany({ where: { userId: id } });
+        await tx.refreshToken.deleteMany({ where: { userId: id } });
+        await tx.consultationNote.deleteMany({ where: { authorId: id } });
+        await tx.patientNote.deleteMany({ where: { authorId: id } });
+        await tx.auditLog.deleteMany({ where: { userId: id } });
+
+        // Unlink or reassign invoices and payments
+        await tx.invoice.updateMany({
+          where: { createdById: id },
+          data: { createdById: currentUserId || null },
+        });
+
+        await tx.payment.updateMany({
+          where: { recordedById: id },
+          data: { recordedById: currentUserId || null },
+        });
+
+        await tx.inventoryTransaction.updateMany({
+          where: { dispensedById: id },
+          data: { dispensedById: null },
+        });
+
+        await tx.prescriptionItem.updateMany({
+          where: { dispensedById: id },
+          data: { dispensedById: null },
+        });
+
+        // Delete user row permanently
+        await tx.user.delete({ where: { id } });
+      });
+
+      return { message: `Staff account for ${user.firstName} ${user.lastName} has been permanently deleted.` };
+    }
+
     return this.prisma.user.update({
       where: { id },
-      data: { isActive: false },
+      data: { isActive: !user.isActive ? true : false },
     });
   }
 
