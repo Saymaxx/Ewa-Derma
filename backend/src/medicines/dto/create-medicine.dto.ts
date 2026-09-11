@@ -28,6 +28,11 @@ export class CreateMedicineDto {
   @IsString()
   categoryId?: string;
 
+  @ApiProperty({ example: 'Chemical Peels', required: false })
+  @IsOptional()
+  @IsString()
+  customCategoryName?: string;
+
   @ApiProperty({ example: 'Tube', default: 'Tablet' })
   @IsOptional()
   @IsString()

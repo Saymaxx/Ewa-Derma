@@ -26,6 +26,7 @@ import {
   Sparkles,
   Truck,
   Layers,
+  PlusCircle,
   X,
 } from 'lucide-react';
 
@@ -81,6 +82,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
       href: '/services',
       icon: <Layers className="w-5 h-5" />,
       roles: ['ADMIN', 'RECEPTIONIST', 'DOCTOR'],
+    },
+    {
+      label: 'Add New Service',
+      href: '/services/new',
+      icon: <PlusCircle className="w-5 h-5" />,
+      roles: ['ADMIN'],
     },
     // Doctor specific items
     {

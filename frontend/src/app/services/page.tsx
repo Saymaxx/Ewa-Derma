@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import Link from 'next/link';
 import { api, getErrorMessage } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import { useToast } from '@/components/ui/Toast';
@@ -15,19 +16,21 @@ import {
   Sparkles,
   Search,
   Plus,
+  PlusCircle,
   Edit2,
   Trash2,
   FileText,
 } from 'lucide-react';
 
-const SERVICE_CATEGORIES = [
-  'All',
-  'Medi-Facial',
+const DEFAULT_CATEGORIES = [
   'Procedure',
+  'Medi-Facial',
   'Laser',
   'Hair Care',
-  'Consultation',
   'Injectable',
+  'Chemical Peel',
+  'Consultation',
+  'Surgery / Minor OT',
   'Other',
 ];
 
@@ -47,6 +50,7 @@ export default function ServicesPage() {
   const [addForm, setAddForm] = useState({
     name: '',
     category: 'Procedure',
+    customCategory: '',
     description: '',
     basePrice: 1500,
     taxRate: 0,
@@ -58,6 +62,7 @@ export default function ServicesPage() {
   const [editForm, setEditForm] = useState({
     name: '',
     category: 'Procedure',
+    customCategory: '',
     description: '',
     basePrice: 1500,
     taxRate: 0,
@@ -93,11 +98,16 @@ export default function ServicesPage() {
       return;
     }
 
+    const finalCategory =
+      addForm.category === '__CUSTOM__'
+        ? addForm.customCategory.trim() || 'Procedure'
+        : addForm.category.trim() || 'Procedure';
+
     setIsAddSubmitting(true);
     try {
       await api.post('/services', {
         name: addForm.name.trim(),
-        category: addForm.category.trim() || 'Procedure',
+        category: finalCategory,
         description: addForm.description.trim() || undefined,
         basePrice: Number(addForm.basePrice) || 0,
         taxRate: Number(addForm.taxRate) || 0,
@@ -108,6 +118,7 @@ export default function ServicesPage() {
       setAddForm({
         name: '',
         category: 'Procedure',
+        customCategory: '',
         description: '',
         basePrice: 1500,
         taxRate: 0,
@@ -126,6 +137,7 @@ export default function ServicesPage() {
     setEditForm({
       name: svc.name || '',
       category: svc.category || 'Procedure',
+      customCategory: '',
       description: svc.description || '',
       basePrice: Number(svc.basePrice) || 0,
       taxRate: Number(svc.taxRate) || 0,
@@ -142,11 +154,16 @@ export default function ServicesPage() {
       return;
     }
 
+    const finalCategory =
+      editForm.category === '__CUSTOM__'
+        ? editForm.customCategory.trim() || 'Procedure'
+        : editForm.category.trim() || 'Procedure';
+
     setIsEditSubmitting(true);
     try {
       await api.patch(`/services/${editService.id}`, {
         name: editForm.name.trim(),
-        category: editForm.category.trim() || 'Procedure',
+        category: finalCategory,
         description: editForm.description.trim() || undefined,
         basePrice: Number(editForm.basePrice) || 0,
         taxRate: Number(editForm.taxRate) || 0,
@@ -180,6 +197,16 @@ export default function ServicesPage() {
     }
   };
 
+  const dynamicCategories = useMemo(() => {
+    const categoriesSet = new Set<string>(['All', ...DEFAULT_CATEGORIES]);
+    services.forEach((s) => {
+      if (s.category && s.category.trim()) {
+        categoriesSet.add(s.category.trim());
+      }
+    });
+    return Array.from(categoriesSet);
+  }, [services]);
+
   const filteredServices = services.filter((s) => {
     const matchesSearch =
       s.name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -208,18 +235,21 @@ export default function ServicesPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <Badge variant="primary" size="md">
             {services.length} Services
           </Badge>
           {isAdmin && (
-            <Button
-              variant="primary"
-              leftIcon={<Plus className="w-4 h-4" />}
-              onClick={() => setIsAddOpen(true)}
-            >
-              Add Procedure / Service
-            </Button>
+            <>
+              <Link href="/services/new">
+                <Button
+                  variant="primary"
+                  leftIcon={<PlusCircle className="w-4 h-4" />}
+                >
+                  Add New Service
+                </Button>
+              </Link>
+            </>
           )}
         </div>
       </div>
@@ -239,7 +269,7 @@ export default function ServicesPage() {
 
             {/* Category Filter Pills */}
             <div className="flex items-center gap-1.5 overflow-x-auto w-full pb-1 sm:pb-0">
-              {SERVICE_CATEGORIES.map((cat) => (
+              {dynamicCategories.map((cat) => (
                 <button
                   key={cat}
                   onClick={() => setSelectedCategory(cat)}
@@ -384,26 +414,36 @@ export default function ServicesPage() {
             required
           />
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-text-primary tracking-wide mb-1.5">
-                Category
-              </label>
+          <div>
+            <label className="block text-xs font-semibold text-text-primary tracking-wide mb-1.5">
+              Category
+            </label>
+            <div className={addForm.category === '__CUSTOM__' ? 'grid grid-cols-1 sm:grid-cols-2 gap-2' : ''}>
               <select
                 className="block w-full rounded-lg border border-gray-300 py-2.5 px-3 text-sm bg-white text-text-primary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
                 value={addForm.category}
                 onChange={(e) => setAddForm({ ...addForm, category: e.target.value })}
               >
-                <option value="Procedure">Procedure</option>
-                <option value="Medi-Facial">Medi-Facial</option>
-                <option value="Laser">Laser Treatment</option>
-                <option value="Hair Care">Hair Care</option>
-                <option value="Injectable">Injectable / Dermal</option>
-                <option value="Consultation">Consultation</option>
-                <option value="Other">Other</option>
+                {DEFAULT_CATEGORIES.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+                <option value="__CUSTOM__">+ Custom Category...</option>
               </select>
-            </div>
 
+              {addForm.category === '__CUSTOM__' && (
+                <Input
+                  placeholder="Enter Custom Category (e.g. Thread Lift)"
+                  value={addForm.customCategory}
+                  onChange={(e) => setAddForm({ ...addForm, customCategory: e.target.value })}
+                  autoFocus
+                />
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
               label="Base Price (₹)"
               type="number"
@@ -413,9 +453,7 @@ export default function ServicesPage() {
               onChange={(e) => setAddForm({ ...addForm, basePrice: Number(e.target.value) })}
               required
             />
-          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
               label="GST Tax Rate (%)"
               type="number"
@@ -461,26 +499,36 @@ export default function ServicesPage() {
             required
           />
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-text-primary tracking-wide mb-1.5">
-                Category
-              </label>
+          <div>
+            <label className="block text-xs font-semibold text-text-primary tracking-wide mb-1.5">
+              Category
+            </label>
+            <div className={editForm.category === '__CUSTOM__' ? 'grid grid-cols-1 sm:grid-cols-2 gap-2' : ''}>
               <select
                 className="block w-full rounded-lg border border-gray-300 py-2.5 px-3 text-sm bg-white text-text-primary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
                 value={editForm.category}
                 onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
               >
-                <option value="Procedure">Procedure</option>
-                <option value="Medi-Facial">Medi-Facial</option>
-                <option value="Laser">Laser Treatment</option>
-                <option value="Hair Care">Hair Care</option>
-                <option value="Injectable">Injectable / Dermal</option>
-                <option value="Consultation">Consultation</option>
-                <option value="Other">Other</option>
+                {DEFAULT_CATEGORIES.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+                <option value="__CUSTOM__">+ Custom Category...</option>
               </select>
-            </div>
 
+              {editForm.category === '__CUSTOM__' && (
+                <Input
+                  placeholder="Enter Custom Category (e.g. Thread Lift)"
+                  value={editForm.customCategory}
+                  onChange={(e) => setEditForm({ ...editForm, customCategory: e.target.value })}
+                  autoFocus
+                />
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
               label="Base Price (₹)"
               type="number"
@@ -489,9 +537,7 @@ export default function ServicesPage() {
               onChange={(e) => setEditForm({ ...editForm, basePrice: Number(e.target.value) })}
               required
             />
-          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
               label="GST Tax Rate (%)"
               type="number"
@@ -500,20 +546,20 @@ export default function ServicesPage() {
               value={editForm.taxRate}
               onChange={(e) => setEditForm({ ...editForm, taxRate: Number(e.target.value) })}
             />
+          </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-text-primary tracking-wide mb-1.5">
-                Catalog Status
-              </label>
-              <select
-                className="block w-full rounded-lg border border-gray-300 py-2.5 px-3 text-sm bg-white text-text-primary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-                value={editForm.isActive ? 'true' : 'false'}
-                onChange={(e) => setEditForm({ ...editForm, isActive: e.target.value === 'true' })}
-              >
-                <option value="true">Active (Bookable)</option>
-                <option value="false">Inactive / Discontinued</option>
-              </select>
-            </div>
+          <div>
+            <label className="block text-xs font-semibold text-text-primary tracking-wide mb-1.5">
+              Catalog Status
+            </label>
+            <select
+              className="block w-full rounded-lg border border-gray-300 py-2.5 px-3 text-sm bg-white text-text-primary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+              value={editForm.isActive ? 'true' : 'false'}
+              onChange={(e) => setEditForm({ ...editForm, isActive: e.target.value === 'true' })}
+            >
+              <option value="true">Active (Bookable & Billable)</option>
+              <option value="false">Inactive / Discontinued</option>
+            </select>
           </div>
 
           <Input

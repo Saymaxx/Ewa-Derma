@@ -23,22 +23,6 @@ import {
   Building2,
 } from 'lucide-react';
 
-const COMMON_UNITS = [
-  'Tube',
-  'Tablet',
-  'Capsule',
-  'Bottle',
-  'Vial',
-  'Sachet',
-  'Cream',
-  'Gel',
-  'Serum',
-  'Lotion',
-  'Soap / Bar',
-  'Kit',
-  'Pump Dispenser',
-];
-
 const DEFAULT_DERMA_CATEGORIES = [
   'Topical Creams & Ointments',
   'Oral Antibiotics',
@@ -54,6 +38,21 @@ const DEFAULT_DERMA_CATEGORIES = [
   'Capsules',
   'Mask',
   'Shampoo',
+  'Tube',
+  'Tablet',
+  'Capsule',
+  'Bottle',
+  'Vial',
+  'Sachet',
+  'Cream',
+  'Gel',
+  'Serum',
+  'Lotion',
+  'Soap / Bar',
+  'Kit',
+  'Pump Dispenser',
+  'Spray',
+  'Ointment',
 ];
 
 export default function AddNewMedicinePage() {
@@ -71,8 +70,7 @@ export default function AddNewMedicinePage() {
   const [genericName, setGenericName] = useState('');
   const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState('');
-  const [unit, setUnit] = useState('Tube');
-  const [customUnit, setCustomUnit] = useState('');
+  const [customCategory, setCustomCategory] = useState('');
   const [unitPrice, setUnitPrice] = useState<number>(350);
   const [mrp, setMrp] = useState<number>(399);
   const [purchasePrice, setPurchasePrice] = useState<number>(220);
@@ -118,11 +116,26 @@ export default function AddNewMedicinePage() {
 
     setIsSubmitting(true);
     try {
-      const finalUnit = unit === 'OTHER' ? customUnit.trim() || 'Unit' : unit || 'Unit';
+      let finalCategoryId: string | undefined = undefined;
+      let finalCustomCategoryName: string | undefined = undefined;
+      let derivedUnit = 'Unit';
 
-      // Match category ID: if categoryId matches a UUID, send it; if it's name-only or valid, find from list
-      const matchedCat = categories.find((c) => c.id === categoryId || c.name === categoryId);
-      const finalCategoryId = matchedCat?.id && matchedCat.id.length > 20 ? matchedCat.id : undefined;
+      if (categoryId === '__CUSTOM__') {
+        const trimmedCustom = customCategory.trim();
+        if (trimmedCustom) {
+          finalCustomCategoryName = trimmedCustom;
+          derivedUnit = trimmedCustom;
+        }
+      } else if (categoryId) {
+        const matchedCat = categories.find((c) => c.id === categoryId || c.name === categoryId);
+        if (matchedCat) {
+          finalCategoryId = matchedCat.id && matchedCat.id.length > 20 ? matchedCat.id : undefined;
+          if (!finalCategoryId) {
+            finalCustomCategoryName = matchedCat.name;
+          }
+          derivedUnit = matchedCat.name || 'Unit';
+        }
+      }
 
       // 1. Create the Master Medicine
       const createRes = await api.post('/medicines', {
@@ -131,7 +144,8 @@ export default function AddNewMedicinePage() {
         genericName: genericName.trim() || undefined,
         description: description.trim() || undefined,
         categoryId: finalCategoryId,
-        unit: finalUnit,
+        customCategoryName: finalCustomCategoryName,
+        unit: derivedUnit,
         unitPrice: Number(unitPrice) || 0,
         mrp: Number(mrp) || Number(unitPrice) || 0,
         purchasePrice: Number(purchasePrice) || 0,
@@ -255,53 +269,39 @@ export default function AddNewMedicinePage() {
                 />
               </div>
 
-              <div>
+              <div className="md:col-span-2">
                 <label className="text-xs font-semibold text-text-main block mb-1">
                   Dermatology Category
                 </label>
-                <select
-                  value={categoryId}
-                  onChange={(e) => setCategoryId(e.target.value)}
-                  className="w-full h-9 rounded-xl border border-surface-border bg-white px-3 text-xs focus:border-primary focus:outline-none"
-                >
-                  <option value="">-- Select Category (Optional) --</option>
-                  {categoryList.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-text-main block mb-1">
-                  Packaging / Unit Formulation
-                </label>
-                <div className={unit === 'OTHER' ? 'grid grid-cols-1 sm:grid-cols-2 gap-2' : ''}>
+                <div className={categoryId === '__CUSTOM__' ? 'grid grid-cols-1 sm:grid-cols-2 gap-2' : ''}>
                   <select
-                    value={unit}
-                    onChange={(e) => setUnit(e.target.value)}
+                    value={categoryId}
+                    onChange={(e) => setCategoryId(e.target.value)}
                     className="w-full h-9 rounded-xl border border-surface-border bg-white px-3 text-xs focus:border-primary focus:outline-none"
                   >
-                    <option value="">-- Select Unit (Optional) --</option>
-                    {COMMON_UNITS.map((u) => (
-                      <option key={u} value={u}>
-                        {u}
+                    <option value="">-- Select Category (Optional) --</option>
+                    {categoryList.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
                       </option>
                     ))}
-                    <option value="OTHER">Other Custom Unit...</option>
+                    <option value="__CUSTOM__">+ Custom Category...</option>
                   </select>
 
-                  {unit === 'OTHER' && (
+                  {categoryId === '__CUSTOM__' && (
                     <Input
                       type="text"
-                      placeholder="Specify Unit (e.g. Spray)"
-                      value={customUnit}
-                      onChange={(e) => setCustomUnit(e.target.value)}
+                      placeholder="Enter Custom Category (e.g. Chemical Peels, Sunscreen Spray)"
+                      value={customCategory}
+                      onChange={(e) => setCustomCategory(e.target.value)}
                       className="text-xs"
+                      autoFocus
                     />
                   )}
                 </div>
+                <p className="text-[11px] text-text-muted mt-1">
+                  Select an existing dermatology category or choose &ldquo;+ Custom Category&rdquo; to define a new one.
+                </p>
               </div>
 
               <div className="md:col-span-2">

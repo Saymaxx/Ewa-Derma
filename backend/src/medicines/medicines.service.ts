@@ -155,15 +155,41 @@ export class MedicinesService {
     });
   }
 
+  async createCategory(name: string) {
+    const trimmed = name?.trim();
+    if (!trimmed) {
+      throw new NotFoundException('Category name is required');
+    }
+    const existing = await this.prisma.medicineCategory.findFirst({
+      where: { name: { equals: trimmed, mode: 'insensitive' } },
+    });
+    if (existing) {
+      return existing;
+    }
+    return this.prisma.medicineCategory.create({
+      data: { name: trimmed },
+    });
+  }
+
   async create(dto: CreateMedicineDto) {
+    let finalCategoryId = dto.categoryId || null;
+
+    if (dto.customCategoryName && dto.customCategoryName.trim()) {
+      const cat = await this.createCategory(dto.customCategoryName.trim());
+      finalCategoryId = cat.id;
+    } else if (finalCategoryId && !finalCategoryId.match(/^[0-9a-fA-F-]{36}$/)) {
+      const cat = await this.createCategory(finalCategoryId);
+      finalCategoryId = cat.id;
+    }
+
     return this.prisma.medicine.create({
       data: {
         name: dto.name.trim(),
         brand: dto.brand?.trim() || null,
         genericName: dto.genericName?.trim() || null,
         description: dto.description?.trim() || null,
-        categoryId: dto.categoryId || null,
-        unit: dto.unit || 'Tablet',
+        categoryId: finalCategoryId,
+        unit: dto.unit || 'Unit',
         unitPrice: dto.unitPrice || 0,
         mrp: dto.mrp || dto.unitPrice || 0,
         purchasePrice: dto.purchasePrice || 0,
@@ -180,6 +206,15 @@ export class MedicinesService {
   async update(id: string, dto: UpdateMedicineDto) {
     await this.findOne(id);
 
+    let finalCategoryId = dto.categoryId !== undefined ? dto.categoryId : undefined;
+    if (dto.customCategoryName && dto.customCategoryName.trim()) {
+      const cat = await this.createCategory(dto.customCategoryName.trim());
+      finalCategoryId = cat.id;
+    } else if (finalCategoryId && !finalCategoryId.match(/^[0-9a-fA-F-]{36}$/)) {
+      const cat = await this.createCategory(finalCategoryId);
+      finalCategoryId = cat.id;
+    }
+
     return this.prisma.medicine.update({
       where: { id },
       data: {
@@ -187,7 +222,7 @@ export class MedicinesService {
         ...(dto.brand !== undefined ? { brand: dto.brand?.trim() || null } : {}),
         ...(dto.genericName !== undefined ? { genericName: dto.genericName?.trim() || null } : {}),
         ...(dto.description !== undefined ? { description: dto.description?.trim() || null } : {}),
-        ...(dto.categoryId !== undefined ? { categoryId: dto.categoryId || null } : {}),
+        ...(finalCategoryId !== undefined ? { categoryId: finalCategoryId || null } : {}),
         ...(dto.unit !== undefined ? { unit: dto.unit } : {}),
         ...(dto.unitPrice !== undefined ? { unitPrice: dto.unitPrice } : {}),
         ...(dto.mrp !== undefined ? { mrp: dto.mrp } : {}),
@@ -218,6 +253,19 @@ export class MedicinesService {
       'Capsules',
       'Mask',
       'Shampoo',
+      'Tube',
+      'Bottle',
+      'Vial',
+      'Sachet',
+      'Cream',
+      'Gel',
+      'Serum',
+      'Lotion',
+      'Soap / Bar',
+      'Kit',
+      'Pump Dispenser',
+      'Spray',
+      'Ointment',
     ];
 
     const existing = await this.prisma.medicineCategory.findMany({

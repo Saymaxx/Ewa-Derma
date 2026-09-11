@@ -49,6 +49,7 @@ export default function MedicinesPage() {
     genericName: '',
     description: '',
     categoryId: '',
+    customCategory: '',
     unit: 'Tablet',
     unitPrice: 0,
     purchasePrice: 0,
@@ -124,6 +125,7 @@ export default function MedicinesPage() {
       genericName: med.genericName || '',
       description: med.description || '',
       categoryId: med.categoryId || '',
+      customCategory: '',
       unit: med.unit || 'Tablet',
       unitPrice: Number(med.unitPrice) || 0,
       purchasePrice: Number(med.purchasePrice) || 0,
@@ -146,12 +148,25 @@ export default function MedicinesPage() {
 
     setIsSubmitting(true);
     try {
+      let finalCategoryId: string | undefined = undefined;
+      let finalCustomCategoryName: string | undefined = undefined;
+
+      if (editForm.categoryId === '__CUSTOM__') {
+        const trimmed = editForm.customCategory.trim();
+        if (trimmed) {
+          finalCustomCategoryName = trimmed;
+        }
+      } else if (editForm.categoryId) {
+        finalCategoryId = editForm.categoryId;
+      }
+
       await api.patch(`/medicines/${selectedMed.id}`, {
         name: editForm.name.trim(),
         brand: editForm.brand.trim() || undefined,
         genericName: editForm.genericName.trim() || undefined,
         description: editForm.description.trim() || undefined,
-        categoryId: editForm.categoryId || undefined,
+        categoryId: finalCategoryId,
+        customCategoryName: finalCustomCategoryName,
         unit: editForm.unit,
         unitPrice: Number(editForm.unitPrice) || 0,
         purchasePrice: Number(editForm.purchasePrice) || 0,
@@ -444,65 +459,36 @@ export default function MedicinesPage() {
               />
               <div>
                 <label className="block text-xs font-semibold text-text-primary tracking-wide mb-1.5">
-                  Category
+                  Dermatology Category
                 </label>
-                <select
-                  className="block w-full rounded-lg border border-gray-300 py-2.5 px-3 text-sm bg-white text-text-primary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-                  value={editForm.categoryId}
-                  onChange={(e) => setEditForm({ ...editForm, categoryId: e.target.value })}
-                >
-                  <option value="">Select Category...</option>
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
+                <div className={editForm.categoryId === '__CUSTOM__' ? 'grid grid-cols-1 sm:grid-cols-2 gap-2' : ''}>
+                  <select
+                    className="block w-full rounded-lg border border-gray-300 py-2.5 px-3 text-sm bg-white text-text-primary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                    value={editForm.categoryId}
+                    onChange={(e) => setEditForm({ ...editForm, categoryId: e.target.value })}
+                  >
+                    <option value="">Select Category...</option>
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                    <option value="__CUSTOM__">+ Custom Category...</option>
+                  </select>
+
+                  {editForm.categoryId === '__CUSTOM__' && (
+                    <Input
+                      placeholder="Enter Custom Category (e.g. Chemical Peels)"
+                      value={editForm.customCategory}
+                      onChange={(e) => setEditForm({ ...editForm, customCategory: e.target.value })}
+                      autoFocus
+                    />
+                  )}
+                </div>
               </div>
             </div>
 
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs font-semibold text-text-primary tracking-wide">
-                  Clinical Description & Dosage Note <span className="text-text-muted font-normal">(Optional)</span>
-                </label>
-                <span className={`text-[11px] ${(editForm.description?.length || 0) > 260 ? 'text-amber-600 font-semibold' : 'text-text-muted'}`}>
-                  {editForm.description?.length || 0}/280
-                </span>
-              </div>
-              <textarea
-                rows={2}
-                maxLength={280}
-                placeholder="e.g. Topical retinoid for acne vulgaris and photoaging. Apply pea-sized amount at night."
-                className="block w-full rounded-lg border border-gray-300 py-2.5 px-3 text-xs bg-white text-text-primary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-                value={editForm.description}
-                onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-              />
-              <p className="text-[11px] text-text-secondary mt-1">
-                Brief note on what it treats and typical dosage (shown to staff when selecting this medicine).
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-text-primary tracking-wide mb-1.5">
-                  Packaging / Unit
-                </label>
-                <select
-                  className="block w-full rounded-lg border border-gray-300 py-2.5 px-3 text-sm bg-white text-text-primary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-                  value={editForm.unit}
-                  onChange={(e) => setEditForm({ ...editForm, unit: e.target.value })}
-                >
-                  <option value="Tablet">Tablet</option>
-                  <option value="Capsule">Capsule</option>
-                  <option value="Tube (Cream/Gel)">Tube (Cream/Gel)</option>
-                  <option value="Bottle (Serum/Lotion)">Bottle (Serum/Lotion)</option>
-                  <option value="Bottle (Shampoo/Wash)">Bottle (Shampoo/Wash)</option>
-                  <option value="Syringe / Vial">Syringe / Vial</option>
-                  <option value="Unit">Unit</option>
-                </select>
-              </div>
-
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Input
                 label="Selling Price (₹)"
                 type="number"

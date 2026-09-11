@@ -30,6 +30,14 @@ export class MedicinesController {
     return this.medicinesService.getCategories();
   }
 
+  @Post('categories')
+  @Roles(RoleName.ADMIN, RoleName.DOCTOR, RoleName.INVENTORY_MANAGER)
+  @ApiOperation({ summary: 'Add a new custom medicine category' })
+  @ApiResponse({ status: 201, description: 'Category created successfully' })
+  async createCategory(@Body('name') name: string) {
+    return this.medicinesService.createCategory(name);
+  }
+
   @Get(':id')
   @Roles(RoleName.ADMIN, RoleName.DOCTOR, RoleName.RECEPTIONIST, RoleName.INVENTORY_MANAGER)
   @ApiOperation({ summary: 'Get single medicine details with active batch stock breakdown' })
@@ -55,7 +63,7 @@ export class MedicinesController {
   }
 
   @Post()
-  @Roles(RoleName.ADMIN, RoleName.INVENTORY_MANAGER)
+  @Roles(RoleName.ADMIN, RoleName.DOCTOR, RoleName.INVENTORY_MANAGER)
   @ApiOperation({ summary: 'Add a new medicine to the formulary catalog' })
   @ApiResponse({ status: 201, description: 'Medicine added to formulary' })
   async create(@Body() createMedicineDto: CreateMedicineDto) {

@@ -28,6 +28,11 @@ export class UpdateMedicineDto {
   @IsString()
   categoryId?: string;
 
+  @ApiPropertyOptional({ description: 'Custom Category Name', example: 'Chemical Peels' })
+  @IsOptional()
+  @IsString()
+  customCategoryName?: string;
+
   @ApiPropertyOptional({ description: 'Unit type', example: 'Tube' })
   @IsOptional()
   @IsString()
