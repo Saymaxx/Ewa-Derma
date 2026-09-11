@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Patch,
+  Delete,
   Param,
   Query,
   Body,
@@ -72,6 +73,13 @@ export class InvoicesController {
   ) {
     const userId = req.user?.id || req.user?.sub;
     return this.invoicesService.updateStatus(id, dto, userId);
+  }
+
+  @Delete(':id')
+  @Roles('ADMIN')
+  async remove(@Param('id') id: string, @Req() req: any) {
+    const userId = req.user?.id || req.user?.sub;
+    return this.invoicesService.remove(id, userId);
   }
 
   @Get(':id/pdf')

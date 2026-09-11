@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
-import { api } from '@/lib/api';
+import { api, getErrorMessage } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import { useToast } from '@/components/ui/Toast';
 import { Button } from '@/components/ui/Button';
@@ -239,8 +239,7 @@ export default function ClinicSettingsPage() {
       await refreshProfile();
       showToast('Clinic settings updated and applied app-wide!', 'success');
     } catch (err: any) {
-      const msg = err.response?.data?.message || 'Failed to update clinic settings';
-      showToast(Array.isArray(msg) ? msg[0] : msg, 'error');
+      showToast(getErrorMessage(err), 'error');
     } finally {
       setIsSaving(false);
     }

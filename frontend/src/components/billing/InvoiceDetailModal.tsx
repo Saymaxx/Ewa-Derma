@@ -20,6 +20,8 @@ import {
   IndianRupee,
   Mail,
   MessageSquare,
+  Trash2,
+  AlertTriangle,
 } from 'lucide-react';
 
 interface InvoiceDetailModalProps {
@@ -61,6 +63,30 @@ export default function InvoiceDetailModal({
   const [notifHistory, setNotifHistory] = useState<any[]>([]);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [isSendingWA, setIsSendingWA] = useState(false);
+
+  // Delete State
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDeleteInvoice = async () => {
+    if (!invoiceId) return;
+    setIsDeleting(true);
+    try {
+      await api.delete(`/invoices/${invoiceId}`);
+      showToast(
+        `Invoice ${invoice?.invoiceCode || ''} permanently deleted from database.`,
+        'success',
+        'Invoice Deleted',
+      );
+      setConfirmDelete(false);
+      onRefresh();
+      onClose();
+    } catch (err: any) {
+      showToast(err?.response?.data?.message || 'Failed to delete invoice', 'error');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const loadNotifHistory = useCallback(async () => {
     if (!invoiceId) return;
@@ -281,8 +307,47 @@ export default function InvoiceDetailModal({
                 Record Payment
               </Button>
             )}
+            {isAdmin && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-status-danger hover:bg-status-danger/10"
+                title="Permanently Delete Invoice"
+                onClick={() => setConfirmDelete(!confirmDelete)}
+                leftIcon={<Trash2 className="w-4 h-4 text-status-danger" />}
+              >
+                Delete
+              </Button>
+            )}
           </div>
         </div>
+
+        {/* Delete Confirmation Box */}
+        {confirmDelete && (
+          <div className="p-4 bg-red-50 rounded-2xl border border-red-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in">
+            <div className="flex items-start gap-2.5">
+              <AlertTriangle className="w-5 h-5 text-status-danger shrink-0 mt-0.5" />
+              <div className="text-xs text-red-900 space-y-0.5">
+                <p className="font-semibold">Permanently delete invoice {invoice.invoiceCode}?</p>
+                <p className="text-red-700">This action cannot be undone and will permanently remove this invoice and associated payments.</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button size="sm" variant="outline" onClick={() => setConfirmDelete(false)}>
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                variant="primary"
+                className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+                isLoading={isDeleting}
+                onClick={handleDeleteInvoice}
+              >
+                Yes, Delete
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* Quick Payment Collection Drawer / Form */}
         {showPaymentForm && (

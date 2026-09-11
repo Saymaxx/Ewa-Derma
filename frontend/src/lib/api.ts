@@ -113,6 +113,9 @@ api.interceptors.response.use(
 export function getErrorMessage(error: any): string {
   if (!error) return 'Something went wrong. Please try again.';
   const resData = error?.response?.data;
+  if (Array.isArray(resData?.message) && resData.message.length > 0) {
+    return resData.message.join(', ');
+  }
   if (typeof resData?.error?.message === 'string' && resData.error.message.trim()) {
     return resData.error.message;
   }

@@ -2,10 +2,12 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '@/lib/api';
+import { useAuth } from '@/lib/auth-context';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Input';
+import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
 import CreateInvoiceModal from '@/components/billing/CreateInvoiceModal';
 import InvoiceDetailModal from '@/components/billing/InvoiceDetailModal';
@@ -23,14 +25,22 @@ import {
   Filter,
   ChevronLeft,
   ChevronRight,
+  Trash2,
+  AlertTriangle,
 } from 'lucide-react';
 
 export default function InvoicesPage() {
   const { showToast } = useToast();
+  const { hasRole } = useAuth();
+  const isAdmin = hasRole('ADMIN');
 
   const [invoices, setInvoices] = useState<any[]>([]);
   const [patientsList, setPatientsList] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Delete State
+  const [deleteInvoice, setDeleteInvoice] = useState<any | null>(null);
+  const [isDeleteSubmitting, setIsDeleteSubmitting] = useState(false);
 
   // Pagination
   const [page, setPage] = useState(1);
@@ -48,6 +58,25 @@ export default function InvoicesPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+
+  const handleDeleteInvoice = async () => {
+    if (!deleteInvoice) return;
+    setIsDeleteSubmitting(true);
+    try {
+      await api.delete(`/invoices/${deleteInvoice.id}`);
+      showToast(
+        `Invoice ${deleteInvoice.invoiceCode} permanently deleted from database.`,
+        'success',
+        'Invoice Deleted',
+      );
+      setDeleteInvoice(null);
+      fetchInvoices();
+    } catch (err: any) {
+      showToast(err?.response?.data?.message || 'Failed to delete invoice', 'error');
+    } finally {
+      setIsDeleteSubmitting(false);
+    }
+  };
 
   const fetchInvoices = useCallback(async () => {
     setIsLoading(true);
@@ -338,6 +367,16 @@ export default function InvoicesPage() {
                             >
                               Inspect / Collect
                             </button>
+                            {isAdmin && (
+                              <button
+                                type="button"
+                                title="Permanently Delete Invoice"
+                                onClick={() => setDeleteInvoice(inv)}
+                                className="min-h-[36px] min-w-[36px] px-2 flex items-center justify-center rounded-lg border border-red-200 text-status-danger hover:bg-status-danger/10 transition-colors"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -403,6 +442,47 @@ export default function InvoicesPage() {
             onClose={() => setIsDetailOpen(false)}
             onRefresh={fetchInvoices}
           />
+
+          {/* Permanent Delete Invoice Modal */}
+          <Modal
+            isOpen={!!deleteInvoice}
+            onClose={() => setDeleteInvoice(null)}
+            title="Permanently Delete Invoice"
+            description="Are you sure you want to permanently erase this invoice record?"
+            maxWidth="sm"
+          >
+            <div className="space-y-4">
+              <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-status-danger shrink-0 mt-0.5" />
+                <div className="text-xs text-red-800 space-y-1.5">
+                  <p className="font-semibold text-red-900">
+                    Delete Invoice: {deleteInvoice?.invoiceCode} — {deleteInvoice?.patient?.firstName} {deleteInvoice?.patient?.lastName}
+                  </p>
+                  <p>
+                    Invoice Total: <strong>₹{Number(deleteInvoice?.totalAmount || 0).toFixed(2)}</strong> ({deleteInvoice?.status})
+                  </p>
+                  <p>
+                    This action is <strong className="text-red-900">irreversible</strong>. The invoice and its associated line items & payment transactions will be completely deleted from the database.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-surface-border">
+                <Button type="button" variant="outline" onClick={() => setDeleteInvoice(null)}>
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  variant="primary"
+                  className="bg-red-600 hover:bg-red-700 focus:ring-red-600 shadow-sm"
+                  isLoading={isDeleteSubmitting}
+                  onClick={handleDeleteInvoice}
+                >
+                  Permanently Delete
+                </Button>
+              </div>
+            </div>
+          </Modal>
     </div>
   );
 }

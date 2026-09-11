@@ -6,6 +6,7 @@ import {
   IsInt,
   Min,
   Max,
+  ValidateIf,
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
@@ -28,6 +29,7 @@ export class UpdateClinicSettingsDto {
 
   @ApiPropertyOptional({ example: 'contact@ewaderma.com', description: 'Clinic email address' })
   @IsOptional()
+  @ValidateIf((o) => o.email !== '' && o.email !== null && o.email !== undefined)
   @IsEmail({}, { message: 'Must be a valid email address' })
   email?: string;
 

@@ -336,4 +336,55 @@ export class InvoicesService {
 
     return updated;
   }
+
+  async remove(id: string, userId?: string) {
+    const invoice = await this.findOne(id);
+
+    await this.prisma.$transaction(async (tx) => {
+      // 1. Find all payments for this invoice
+      const payments = await tx.payment.findMany({
+        where: { invoiceId: id },
+        select: { id: true },
+      });
+      const paymentIds = payments.map((p) => p.id);
+
+      // 2. Delete refunds for these payments
+      if (paymentIds.length > 0) {
+        await tx.refund.deleteMany({
+          where: { paymentId: { in: paymentIds } },
+        });
+      }
+
+      // 3. Delete payments
+      await tx.payment.deleteMany({
+        where: { invoiceId: id },
+      });
+
+      // 4. Delete invoice items
+      await tx.invoiceItem.deleteMany({
+        where: { invoiceId: id },
+      });
+
+      // 5. Delete invoice
+      await tx.invoice.delete({
+        where: { id },
+      });
+    });
+
+    if (userId) {
+      await this.auditLogService.log({
+        userId,
+        action: 'INVOICE_DELETED',
+        entityName: 'Invoice',
+        entityId: id,
+        details: {
+          invoiceCode: invoice.invoiceCode,
+          patientId: invoice.patientId,
+          totalAmount: Number(invoice.totalAmount),
+        },
+      });
+    }
+
+    return { message: `Invoice ${invoice.invoiceCode} permanently deleted.` };
+  }
 }

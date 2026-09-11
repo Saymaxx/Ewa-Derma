@@ -40,11 +40,11 @@ export class AdminService {
     if (!settings) {
       settings = await this.prisma.clinicSetting.create({
         data: {
-          clinicName: dto.clinicName || 'Ewa Derma Clinic',
-          address: dto.address || '4th Floor, Medical Arts Building, MG Road, Bangalore 560001',
-          contactNumber: dto.contactNumber || '+91 9120854977',
-          email: dto.email || 'contact@ewaderma.com',
-          gstNumber: dto.gstNumber || null,
+          clinicName: dto.clinicName?.trim() || 'Ewa Derma Clinic',
+          address: dto.address?.trim() || '4th Floor, Medical Arts Building, MG Road, Bangalore 560001',
+          contactNumber: dto.contactNumber?.trim() || '+91 9120854977',
+          email: dto.email?.trim() || 'contact@ewaderma.com',
+          gstNumber: dto.gstNumber?.trim() || null,
           taxRate: dto.taxRate !== undefined ? dto.taxRate : 18.0,
           openingTime: dto.openingTime || '10:00',
           closingTime: dto.closingTime || '19:00',
@@ -57,11 +57,11 @@ export class AdminService {
       settings = await this.prisma.clinicSetting.update({
         where: { id: settings.id },
         data: {
-          ...(dto.clinicName !== undefined && { clinicName: dto.clinicName }),
-          ...(dto.address !== undefined && { address: dto.address }),
-          ...(dto.contactNumber !== undefined && { contactNumber: dto.contactNumber }),
-          ...(dto.email !== undefined && { email: dto.email }),
-          ...(dto.gstNumber !== undefined && { gstNumber: dto.gstNumber }),
+          ...(dto.clinicName !== undefined && { clinicName: dto.clinicName.trim() }),
+          ...(dto.address !== undefined && { address: dto.address.trim() }),
+          ...(dto.contactNumber !== undefined && { contactNumber: dto.contactNumber.trim() }),
+          ...(dto.email !== undefined && { email: dto.email ? dto.email.trim() : null }),
+          ...(dto.gstNumber !== undefined && { gstNumber: dto.gstNumber ? dto.gstNumber.trim() : null }),
           ...(dto.taxRate !== undefined && { taxRate: dto.taxRate }),
           ...(dto.openingTime !== undefined && { openingTime: dto.openingTime }),
           ...(dto.closingTime !== undefined && { closingTime: dto.closingTime }),
