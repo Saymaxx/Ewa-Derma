@@ -32,6 +32,9 @@ export class AppointmentsReportService {
         gte: startDate,
         lte: adjustedEndDate,
       },
+      patient: {
+        isActive: true,
+      },
     };
 
     // Scoped doctor access: If user is DOCTOR role, force doctorId filter

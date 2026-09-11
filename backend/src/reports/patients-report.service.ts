@@ -30,6 +30,7 @@ export class PatientsReportService {
         gte: startDate,
         lte: adjustedEndDate,
       },
+      isActive: true,
     };
 
     if (doctorScopeId) {
@@ -59,6 +60,9 @@ export class PatientsReportService {
         gte: startDate,
         lte: adjustedEndDate,
       },
+      patient: {
+        isActive: true,
+      },
     };
 
     if (doctorScopeId) {
@@ -79,6 +83,7 @@ export class PatientsReportService {
     const activePatientsWithCounts = await this.prisma.patient.findMany({
       where: {
         id: { in: activePatientIds },
+        isActive: true,
       },
       include: {
         _count: {
