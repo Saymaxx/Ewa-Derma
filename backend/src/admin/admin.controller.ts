@@ -252,5 +252,23 @@ export class AdminController {
 
     return result;
   }
+
+  @Post('reset-clinic-data')
+  @Roles(RoleName.ADMIN)
+  @ApiOperation({ summary: 'Purge all test appointments, visits, patients, and invoices to clean 0 (Admin only)' })
+  @ApiResponse({ status: 200, description: 'All test records wiped clean' })
+  async resetClinicData(@CurrentUser() user: AuthenticatedUser) {
+    const result = await this.adminService.resetClinicTestData();
+
+    await this.auditLogService.log({
+      userId: user.id,
+      action: 'CLINIC_DATA_RESET_EXECUTED',
+      entityName: 'System',
+      entityId: 'database-clean-slate',
+      details: { executedBy: user.email },
+    });
+
+    return result;
+  }
 }
 

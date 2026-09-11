@@ -266,19 +266,29 @@ export class AppointmentsService {
     ] = await Promise.all([
       this.prisma.patient.count({ where: { isActive: true } }),
       this.prisma.doctor.count({ where: { isActive: true } }),
-      this.prisma.appointment.count({ where: { appointmentDate: todayDate } }),
       this.prisma.appointment.count({
         where: {
           appointmentDate: todayDate,
+          patient: { isActive: true },
+        },
+      }),
+      this.prisma.appointment.count({
+        where: {
+          appointmentDate: todayDate,
+          patient: { isActive: true },
           status: { in: [AppointmentStatus.CHECKED_IN, AppointmentStatus.WAITING, AppointmentStatus.IN_CONSULTATION] },
         },
       }),
       this.prisma.appointment.groupBy({
         by: ['status'],
+        where: { patient: { isActive: true } },
         _count: { _all: true },
       }),
       this.prisma.appointment.findMany({
-        where: { appointmentDate: { gte: sevenDaysAgo } },
+        where: {
+          appointmentDate: { gte: sevenDaysAgo },
+          patient: { isActive: true },
+        },
         select: { appointmentDate: true, status: true },
       }),
     ]);

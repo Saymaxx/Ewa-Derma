@@ -70,8 +70,9 @@ export default function ClinicSettingsPage() {
   // Storage Stats State
   const [storageStats, setStorageStats] = useState<any>(null);
   const [isLoadingStorage, setIsLoadingStorage] = useState(false);
-  const [cleanupMonths, setCleanupMonths] = useState(24);
+  const [cleanupMonths, setCleanupMonths] = useState(12);
   const [isCleaningUp, setIsCleaningUp] = useState(false);
+  const [isResettingData, setIsResettingData] = useState(false);
 
   const fetchStorageStats = async () => {
     setIsLoadingStorage(true);
@@ -101,6 +102,34 @@ export default function ClinicSettingsPage() {
       showToast(err.response?.data?.error?.message || 'Failed to cleanup storage', 'error');
     } finally {
       setIsCleaningUp(false);
+    }
+  };
+
+  const handleResetClinicData = async () => {
+    const confirmed = window.prompt(
+      '⚠️ EXTREME DANGER: DATABASE CLEAN SLATE\n\n' +
+      'This will permanently delete all test patients, appointments, consultations, prescriptions, invoices, and payments, and reset sequence numbers (P-1001, A-2001, etc.) to start fresh.\n\n' +
+      'Staff accounts, Doctor profiles, Clinic settings, and Service/Medicine catalogs will remain intact.\n\n' +
+      'Type "RESET CLINIC DATA" to confirm:'
+    );
+
+    if (confirmed !== 'RESET CLINIC DATA') {
+      if (confirmed !== null) {
+        showToast('Confirmation mismatch. Operation cancelled.', 'warning');
+      }
+      return;
+    }
+
+    setIsResettingData(true);
+    try {
+      const res = await api.post('/admin/reset-clinic-data');
+      const data = res.data?.data || res.data;
+      showToast(data.message || 'All test data purged and sequence counters reset to zero.', 'success', 'Clean Slate Complete');
+      fetchStorageStats();
+    } catch (err: any) {
+      showToast(err.response?.data?.error?.message || 'Failed to reset test data', 'error');
+    } finally {
+      setIsResettingData(false);
     }
   };
 
@@ -640,6 +669,36 @@ export default function ClinicSettingsPage() {
                   leftIcon={isCleaningUp ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                 >
                   {isCleaningUp ? 'Purging Photos...' : 'Purge Old Media Now'}
+                </Button>
+              </div>
+            </div>
+
+            {/* Danger Zone: Clean Slate / Reset All Test Data */}
+            <div className="p-5 rounded-2xl bg-rose-50/70 border border-rose-200/80 space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-lg bg-rose-100 text-rose-800 shrink-0 mt-0.5">
+                  <AlertTriangle className="w-4 h-4 text-rose-600" />
+                </div>
+                <div className="space-y-1">
+                  <h4 className="text-xs font-bold text-rose-900 uppercase tracking-wider">
+                    Database Clean Slate (Wipe Test Data &amp; Reset Counters)
+                  </h4>
+                  <p className="text-xs text-rose-800">
+                    Permanently delete all dummy/test records (Patients, Appointments, Consultations, Prescriptions, Invoices, and Payments) and reset ID counters to 0. Doctor accounts, Staff users, Clinic Settings, and Service Catalogs will remain preserved.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end pt-2 border-t border-rose-200/60">
+                <Button
+                  type="button"
+                  variant="danger"
+                  size="sm"
+                  onClick={handleResetClinicData}
+                  disabled={isResettingData}
+                  leftIcon={isResettingData ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                >
+                  {isResettingData ? 'Purging All Test Records...' : 'Reset All Test Data (Clean Slate)'}
                 </Button>
               </div>
             </div>

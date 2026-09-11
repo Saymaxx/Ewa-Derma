@@ -475,5 +475,51 @@ export class AdminService {
       olderThanMonths: months,
     };
   }
+
+  async resetClinicTestData() {
+    return this.prisma.$transaction(async (tx) => {
+      // 1. Delete all payments & refunds
+      await tx.refund.deleteMany({});
+      await tx.payment.deleteMany({});
+
+      // 2. Delete invoice items and invoices
+      await tx.invoiceItem.deleteMany({});
+      await tx.invoice.deleteMany({});
+
+      // 3. Delete prescriptions & items
+      await tx.prescriptionItem.deleteMany({});
+      await tx.prescription.deleteMany({});
+
+      // 4. Delete consultations, diagnosis, notes
+      await tx.consultationNote.deleteMany({});
+      await tx.diagnosis.deleteMany({});
+      await tx.consultation.deleteMany({});
+
+      // 5. Delete appointments & status history & follow-ups
+      await tx.appointmentStatusHistory.deleteMany({});
+      await tx.appointment.deleteMany({});
+      await tx.followUp.deleteMany({});
+
+      // 6. Delete patient notes & documents & patients
+      await tx.patientNote.deleteMany({});
+      await tx.patientDocument.deleteMany({});
+      await tx.patient.deleteMany({});
+
+      // 7. Reset sequence counters to 1000
+      const entities = ['P', 'A', 'INV', 'RX', 'C', 'FU'];
+      for (const prefix of entities) {
+        await tx.entitySequence.upsert({
+          where: { prefix },
+          update: { lastNumber: 1000 },
+          create: { prefix, lastNumber: 1000 },
+        });
+      }
+
+      return {
+        success: true,
+        message: 'All test data (patients, appointments, consultations, prescriptions, invoices) has been permanently wiped and sequence counters reset.',
+      };
+    });
+  }
 }
 

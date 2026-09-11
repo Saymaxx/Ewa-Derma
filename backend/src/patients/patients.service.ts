@@ -225,12 +225,53 @@ export class PatientsService {
     });
   }
 
-  async remove(id: string) {
+  async remove(id: string, permanent = false) {
     const existing = await this.prisma.patient.findUnique({
       where: { id },
     });
     if (!existing) {
       throw new NotFoundException(`Patient not found with ID: ${id}`);
+    }
+
+    if (permanent) {
+      await this.prisma.$transaction(async (tx) => {
+        // 1. Invoices & Payments & Refunds
+        const invoices = await tx.invoice.findMany({ where: { patientId: id }, select: { id: true } });
+        const invoiceIds = invoices.map((i) => i.id);
+        if (invoiceIds.length > 0) {
+          const payments = await tx.payment.findMany({ where: { invoiceId: { in: invoiceIds } }, select: { id: true } });
+          const paymentIds = payments.map((p) => p.id);
+          if (paymentIds.length > 0) {
+            await tx.refund.deleteMany({ where: { paymentId: { in: paymentIds } } });
+            await tx.payment.deleteMany({ where: { invoiceId: { in: invoiceIds } } });
+          }
+          await tx.invoiceItem.deleteMany({ where: { invoiceId: { in: invoiceIds } } });
+          await tx.invoice.deleteMany({ where: { patientId: id } });
+        }
+
+        // 2. Prescriptions
+        await tx.prescriptionItem.deleteMany({ where: { prescription: { patientId: id } } });
+        await tx.prescription.deleteMany({ where: { patientId: id } });
+
+        // 3. Consultations
+        await tx.consultationNote.deleteMany({ where: { consultation: { patientId: id } } });
+        await tx.diagnosis.deleteMany({ where: { consultation: { patientId: id } } });
+        await tx.consultation.deleteMany({ where: { patientId: id } });
+
+        // 4. Appointments & Follow-ups
+        await tx.appointmentStatusHistory.deleteMany({ where: { appointment: { patientId: id } } });
+        await tx.appointment.deleteMany({ where: { patientId: id } });
+        await tx.followUp.deleteMany({ where: { patientId: id } });
+        await tx.patientNote.deleteMany({ where: { patientId: id } });
+        await tx.patientDocument.deleteMany({ where: { patientId: id } });
+
+        // 5. Delete patient
+        await tx.patient.delete({ where: { id } });
+      });
+
+      return {
+        message: `Patient ${existing.firstName} ${existing.lastName} (${existing.patientCode}) permanently deleted.`,
+      };
     }
 
     // Deactivate patient (preserving clinical history records)

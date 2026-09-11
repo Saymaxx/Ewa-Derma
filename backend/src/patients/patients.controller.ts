@@ -67,9 +67,13 @@ export class PatientsController {
   @Delete(':id')
   @Roles(RoleName.ADMIN)
   @ApiOperation({ summary: 'Delete or deactivate patient (Admin only)' })
-  @ApiResponse({ status: 200, description: 'Patient deactivated successfully' })
+  @ApiResponse({ status: 200, description: 'Patient deactivated or deleted successfully' })
   @ApiResponse({ status: 403, description: 'Forbidden' })
-  async remove(@Param('id') id: string) {
-    return this.patientsService.remove(id);
+  async remove(
+    @Param('id') id: string,
+    @Query('permanent') permanent?: string,
+  ) {
+    const isPermanent = permanent === 'true';
+    return this.patientsService.remove(id, isPermanent);
   }
 }
