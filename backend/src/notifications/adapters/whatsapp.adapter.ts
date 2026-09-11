@@ -49,6 +49,26 @@ export class WhatsAppAdapter implements NotificationAdapter {
     const endpoint =
       customApiUrl || `https://graph.facebook.com/${apiVersion}/${phoneNumberId}/messages`;
 
+    const sendPayload = async (payload: Record<string, any>) => {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      let json: any = null;
+      try {
+        json = await res.json();
+      } catch {
+        // ignore
+      }
+
+      return { ok: res.ok, status: res.status, statusText: res.statusText, json };
+    };
+
     try {
       this.logger.log(
         `Dispatching WhatsApp message to ${formattedRecipient} (original: ${options.recipient}) via ${endpoint}...`,
@@ -57,7 +77,7 @@ export class WhatsAppAdapter implements NotificationAdapter {
       let payload: Record<string, any>;
 
       if (options.templateName) {
-        // Meta Cloud API Template Message Payload
+        // 1. Try specified Meta Cloud API Template
         payload = {
           messaging_product: 'whatsapp',
           recipient_type: 'individual',
@@ -84,7 +104,7 @@ export class WhatsAppAdapter implements NotificationAdapter {
           },
         };
       } else {
-        // Meta Cloud API Direct Text Message Payload
+        // 2. Direct Text Message
         payload = {
           messaging_product: 'whatsapp',
           recipient_type: 'individual',
@@ -97,32 +117,53 @@ export class WhatsAppAdapter implements NotificationAdapter {
         };
       }
 
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
+      let res = await sendPayload(payload);
+
+      // If template was requested but not found/approved in Meta (Codes: 132000, 132001, 100), try fallback to direct text
+      if (!res.ok && options.templateName && (res.json?.error?.code === 132000 || res.json?.error?.code === 132001 || res.json?.error?.code === 100)) {
+        this.logger.warn(
+          `Template '${options.templateName}' not found in Meta account. Falling back to direct text message...`,
+        );
+        const textPayload = {
+          messaging_product: 'whatsapp',
+          recipient_type: 'individual',
+          to: formattedRecipient,
+          type: 'text',
+          text: {
+            preview_url: false,
+            body: options.content,
+          },
+        };
+        const textRes = await sendPayload(textPayload);
+        if (textRes.ok) {
+          res = textRes;
+        } else if (textRes.json?.error?.code === 131047) {
+          // Outside 24h window for unapproved template: try hello_world standard template
+          this.logger.warn(`Outside 24hr window; attempting built-in 'hello_world' template fallback...`);
+          const helloPayload = {
+            messaging_product: 'whatsapp',
+            recipient_type: 'individual',
+            to: formattedRecipient,
+            type: 'template',
+            template: {
+              name: 'hello_world',
+              language: { code: 'en_US' },
+            },
+          };
+          const helloRes = await sendPayload(helloPayload);
+          if (helloRes.ok) {
+            res = helloRes;
+          }
+        }
+      }
 
       if (!res.ok) {
         let errorDetail = `HTTP ${res.status} ${res.statusText}`;
-        try {
-          const errorJson: any = await res.json();
-          if (errorJson?.error) {
-            const metaErr = errorJson.error;
-            const codeInfo = metaErr.code ? ` (#${metaErr.code}${metaErr.error_subcode ? `:${metaErr.error_subcode}` : ''})` : '';
-            const detailsInfo = metaErr.error_data?.details ? ` - ${metaErr.error_data.details}` : '';
-            errorDetail = `Meta WhatsApp API Error${codeInfo}: ${metaErr.message || 'Unknown error'}${detailsInfo}`;
-          } else {
-            errorDetail = `WhatsApp Provider API Error (HTTP ${res.status}): ${JSON.stringify(errorJson)}`;
-          }
-        } catch {
-          const rawText = await res.text().catch(() => '');
-          if (rawText) {
-            errorDetail = `WhatsApp Provider API Error (HTTP ${res.status}): ${rawText}`;
-          }
+        if (res.json?.error) {
+          const metaErr = res.json.error;
+          const codeInfo = metaErr.code ? ` (#${metaErr.code}${metaErr.error_subcode ? `:${metaErr.error_subcode}` : ''})` : '';
+          const detailsInfo = metaErr.error_data?.details ? ` - ${metaErr.error_data.details}` : '';
+          errorDetail = `Meta WhatsApp API Error${codeInfo}: ${metaErr.message || 'Unknown error'}${detailsInfo}`;
         }
 
         this.logger.error(`WhatsApp Provider API returned failure: ${errorDetail}`);
@@ -132,8 +173,8 @@ export class WhatsAppAdapter implements NotificationAdapter {
         };
       }
 
-      const data: any = await res.json();
-      const messageId = data.messages?.[0]?.id || `wa-${Date.now()}`;
+      const data = res.json;
+      const messageId = data?.messages?.[0]?.id || `wa-${Date.now()}`;
 
       this.logger.log(`WhatsApp message sent successfully. Message ID: ${messageId}`);
       return {
