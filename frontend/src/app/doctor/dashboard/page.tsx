@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/Input';
 import { STATUS_MAPPINGS } from '@/styles/theme';
 import { useWaitingQueuePolling } from '@/lib/useWaitingQueuePolling';
 import { StatGridSkeleton, CardSkeleton } from '@/components/ui/Skeleton';
+import { formatDoctorName } from '@/lib/format-doctor';
 import {
   Stethoscope,
   Clock,
@@ -50,6 +51,9 @@ export default function DoctorDashboardPage() {
 
   // 1. Fetch Doctor's Queue, All Appointments for this Doctor, and Doctor Roster
   const fetchDoctorData = useCallback(async (isSilent = false) => {
+    if (!user || typeof window === 'undefined' || !localStorage.getItem('ewa_access_token')) {
+      return;
+    }
     if (!isSilent) setIsLoading(true);
     try {
       const docId = user?.doctorId || undefined;
@@ -69,17 +73,19 @@ export default function DoctorDashboardPage() {
       setQueue(queueRes.data.data || []);
       setDoctorAppointments(aptsRes.data.data || []);
       setDoctorRoster(docsRes.data.data || []);
-    } catch {
-      if (!isSilent) showToast('Failed to load clinical workspace data', 'error');
+    } catch (err: any) {
+      if (!isSilent && err?.response?.status !== 401 && localStorage.getItem('ewa_access_token')) {
+        showToast('Failed to load clinical workspace data', 'error');
+      }
     } finally {
       setIsLoading(false);
     }
-  }, [user?.doctorId, selectedDateFilter, showToast]);
+  }, [user, selectedDateFilter, showToast]);
 
   const { timeAgoText, triggerImmediateRefresh } = useWaitingQueuePolling({
     fetchFn: () => fetchDoctorData(true),
     intervalMs: 12000,
-    enabled: true,
+    enabled: Boolean(user),
   });
 
   useEffect(() => {
@@ -123,14 +129,14 @@ export default function DoctorDashboardPage() {
       {/* 1. TOP DOCTOR WELCOME & PROFILE BANNER */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-primary via-primary-600 to-primary-dark p-6 rounded-2xl text-white shadow-md relative overflow-hidden">
         <div className="space-y-1 z-10">
-          <div className="flex items-center gap-2">
-            <Stethoscope className="w-6 h-6 text-accent-light" />
-            <h1 className="text-2xl font-bold font-serif tracking-tight">
-              Dr. {user?.firstName} {user?.lastName}
+          <div className="flex items-center gap-2 flex-wrap">
+            <Stethoscope className="w-6 h-6 text-amber-300" />
+            <h1 className="text-2xl font-bold font-serif tracking-tight text-white">
+              {formatDoctorName(user?.firstName, user?.lastName)}
             </h1>
-            <Badge variant="accent" className="ml-1 uppercase text-xs">
+            <span className="ml-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-amber-400/20 text-amber-300 border border-amber-400/40 shadow-xs">
               {myDoctorProfile.specialization || 'Dermatologist'}
-            </Badge>
+            </span>
           </div>
           <p className="text-primary-100 text-sm flex flex-wrap items-center gap-x-4 gap-y-1">
             <span>Reg. No: <strong>{myDoctorProfile.regNumber || 'UPMC-78452'}</strong></span>
@@ -505,7 +511,7 @@ export default function DoctorDashboardPage() {
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-text-primary text-base">
-                          Dr. {doc.user?.firstName} {doc.user?.lastName}
+                          {formatDoctorName(doc.user?.firstName, doc.user?.lastName)}
                         </span>
                         {isMe && <Badge variant="accent" size="sm">You</Badge>}
                         <Badge variant="primary" size="sm">{doc.specialization}</Badge>

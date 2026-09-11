@@ -11,6 +11,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
 import { CardSkeleton } from '@/components/ui/Skeleton';
+import { formatDoctorName } from '@/lib/format-doctor';
 import {
   Stethoscope,
   Clock,
@@ -210,7 +211,7 @@ export default function DoctorsPage() {
     setIsDeleteSubmitting(true);
     try {
       await api.delete(`/doctors/${deleteDoctor.id}`);
-      showToast(`Dr. ${deleteDoctor.user?.firstName} ${deleteDoctor.user?.lastName} profile deactivated.`, 'success', 'Doctor Deactivated');
+      showToast(`${formatDoctorName(deleteDoctor.user?.firstName, deleteDoctor.user?.lastName)} profile deactivated.`, 'success', 'Doctor Deactivated');
       clearCache(CACHE_KEYS.DOCTORS_LIST);
       setDeleteDoctor(null);
       fetchDoctors(true);
@@ -290,7 +291,7 @@ export default function DoctorsPage() {
                   </div>
                   <div>
                     <CardTitle>
-                      Dr. {doc.user?.firstName} {doc.user?.lastName}
+                      {formatDoctorName(doc.user?.firstName, doc.user?.lastName)}
                     </CardTitle>
                     <span className="text-xs text-accent font-semibold block">
                       {doc.specialization}
