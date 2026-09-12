@@ -19,7 +19,7 @@ import { RoleName } from '@prisma/client';
 @ApiBearerAuth()
 @Controller('patients')
 export class PatientsController {
-  constructor(private readonly patientsService: PatientsService) {}
+  constructor(private readonly patientsService: PatientsService) { }
 
   @Post()
   @Roles(RoleName.ADMIN, RoleName.RECEPTIONIST)
