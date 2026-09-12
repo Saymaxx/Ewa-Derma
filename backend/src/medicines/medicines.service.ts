@@ -288,11 +288,45 @@ export class MedicinesService {
     return existing;
   }
 
-  async remove(id: string) {
-    await this.findOne(id);
+  async remove(id: string, permanent: boolean = false) {
+    const med = await this.findOne(id);
+
+    if (permanent) {
+      return this.prisma.$transaction(async (tx) => {
+        await tx.inventoryTransaction.deleteMany({ where: { medicineId: id } });
+        await tx.prescriptionItem.updateMany({
+          where: { medicineId: id },
+          data: { medicineId: null },
+        });
+        await tx.invoiceItem.updateMany({
+          where: { medicineId: id },
+          data: { medicineId: null },
+        });
+        await tx.medicineBatch.deleteMany({ where: { medicineId: id } });
+        await tx.medicine.delete({ where: { id } });
+
+        return { message: `Medicine '${med.name}' permanently deleted.` };
+      });
+    }
+
     return this.prisma.medicine.update({
       where: { id },
       data: { isActive: false },
+    });
+  }
+
+  async clearAllMedicines() {
+    return this.prisma.$transaction(async (tx) => {
+      await tx.prescriptionItem.updateMany({ data: { medicineId: null } });
+      await tx.invoiceItem.updateMany({ data: { medicineId: null } });
+      await tx.inventoryTransaction.deleteMany({});
+      await tx.medicineBatch.deleteMany({});
+      const deleted = await tx.medicine.deleteMany({});
+
+      return {
+        success: true,
+        message: `Successfully cleared all ${deleted.count} medicine records and associated inventory stock batches.`,
+      };
     });
   }
 }

@@ -78,12 +78,24 @@ export class MedicinesController {
     return this.medicinesService.update(id, updateMedicineDto);
   }
 
+  @Post('clear-all')
+  @Roles(RoleName.ADMIN)
+  @ApiOperation({ summary: 'Purge all medicines and inventory batches (Admin only)' })
+  @ApiResponse({ status: 200, description: 'All medicines cleared successfully' })
+  async clearAll() {
+    return this.medicinesService.clearAllMedicines();
+  }
+
   @Delete(':id')
   @Roles(RoleName.ADMIN, RoleName.INVENTORY_MANAGER)
-  @ApiOperation({ summary: 'Deactivate medicine from formulary' })
-  @ApiResponse({ status: 200, description: 'Medicine deactivated successfully' })
-  async remove(@Param('id') id: string) {
-    return this.medicinesService.remove(id);
+  @ApiOperation({ summary: 'Deactivate or permanently delete medicine from formulary' })
+  @ApiResponse({ status: 200, description: 'Medicine deactivated or deleted successfully' })
+  async remove(
+    @Param('id') id: string,
+    @Query('permanent') permanent?: string,
+  ) {
+    const isPermanent = permanent === 'true';
+    return this.medicinesService.remove(id, isPermanent);
   }
 }
 

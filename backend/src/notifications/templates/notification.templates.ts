@@ -33,10 +33,10 @@ export interface PatientRegistrationTemplateData {
 
 export const META_TEMPLATES = {
   PATIENT_REGISTRATION: {
-    name: 'ewa_registration_update',
+    name: 'jaspers_market_order_confirmation_v1',
     category: 'UTILITY',
     language: 'en_US',
-    sample: 'Hi {{1}}, thank you for choosing Ewa Derma Clinic. Your visit reference number is {{2}}. Thank you.',
+    sample: 'Hi {{1}}, Thank you for your visit! Reference: {{2}}',
   },
 } as const;
 

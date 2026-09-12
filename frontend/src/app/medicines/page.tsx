@@ -62,6 +62,8 @@ export default function MedicinesPage() {
   // Deactivate Modal State
   const [deleteMed, setDeleteMed] = useState<any | null>(null);
   const [isDeleteSubmitting, setIsDeleteSubmitting] = useState(false);
+  const [isPermanentDelete, setIsPermanentDelete] = useState(false);
+  const [isClearingAll, setIsClearingAll] = useState(false);
 
   // Fetch Categories
   useEffect(() => {
@@ -106,7 +108,7 @@ export default function MedicinesPage() {
       }
       setAlerts(alertsRes?.data?.data || null);
     } catch (err: any) {
-      showToast('Failed to load medicines formulary', 'error');
+      showToast('Failed to load medicines formulary catalog', 'error');
       setMedicines([]);
     } finally {
       setIsLoading(false);
@@ -188,20 +190,56 @@ export default function MedicinesPage() {
     }
   };
 
-  const handleDeleteMedicine = async () => {
+  const handleDeleteMedicine = async (permanent = false) => {
     if (!deleteMed) return;
     setIsDeleteSubmitting(true);
     try {
-      await api.delete(`/medicines/${deleteMed.id}`);
-      showToast(`Medicine '${deleteMed.name}' deactivated.`, 'success', 'Medicine Deactivated');
+      await api.delete(`/medicines/${deleteMed.id}${permanent ? '?permanent=true' : ''}`);
+      showToast(
+        permanent
+          ? `Medicine '${deleteMed.name}' permanently deleted.`
+          : `Medicine '${deleteMed.name}' deactivated.`,
+        'success',
+        permanent ? 'Medicine Deleted' : 'Medicine Deactivated',
+      );
       clearCache(CACHE_KEYS.MEDICINES_LIST);
       setDeleteMed(null);
+      setIsPermanentDelete(false);
       fetchMedicines(true);
     } catch (err: any) {
       const msg = getErrorMessage(err);
-      showToast(msg, 'error', 'Deactivation Failed');
+      showToast(msg, 'error', permanent ? 'Deletion Failed' : 'Deactivation Failed');
     } finally {
       setIsDeleteSubmitting(false);
+    }
+  };
+
+  const handleClearAllMedicines = async () => {
+    const confirmed = window.prompt(
+      '⚠️ DANGER: PURGE ALL MEDICINES\n\n' +
+      'This will permanently delete all medicine catalog records, inventory stock batches, and purchases.\n\n' +
+      'Type "CLEAR ALL MEDICINES" to confirm:'
+    );
+
+    if (confirmed !== 'CLEAR ALL MEDICINES') {
+      if (confirmed !== null) {
+        showToast('Confirmation mismatch. Operation cancelled.', 'warning');
+      }
+      return;
+    }
+
+    setIsClearingAll(true);
+    try {
+      const res = await api.post('/medicines/clear-all');
+      const data = res.data?.data || res.data;
+      showToast(data.message || 'All medicines cleared successfully.', 'success', 'Catalog Cleared');
+      clearCache(CACHE_KEYS.MEDICINES_LIST);
+      fetchMedicines(true);
+    } catch (err: any) {
+      const msg = getErrorMessage(err);
+      showToast(msg, 'error', 'Failed to Clear Medicines');
+    } finally {
+      setIsClearingAll(false);
     }
   };
 
@@ -243,6 +281,18 @@ export default function MedicinesPage() {
               Expiry Tracking
             </Button>
           </Link>
+          {hasRole('ADMIN') && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-status-danger hover:bg-red-50 border-red-200"
+              onClick={handleClearAllMedicines}
+              isLoading={isClearingAll}
+              leftIcon={<Trash2 className="w-4 h-4" />}
+            >
+              Clear All Medicines
+            </Button>
+          )}
         </div>
       </div>
 
@@ -591,13 +641,29 @@ export default function MedicinesPage() {
             </Button>
             <Button
               type="button"
-              variant="primary"
-              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
-              isLoading={isDeleteSubmitting}
-              onClick={handleDeleteMedicine}
+              variant="outline"
+              className="text-amber-700 border-amber-300 hover:bg-amber-50"
+              isLoading={isDeleteSubmitting && !isPermanentDelete}
+              onClick={() => {
+                setIsPermanentDelete(false);
+                handleDeleteMedicine(false);
+              }}
             >
-              Confirm Deactivation
+              Deactivate
             </Button>
+            {hasRole('ADMIN') && (
+              <Button
+                type="button"
+                variant="danger"
+                isLoading={isDeleteSubmitting && isPermanentDelete}
+                onClick={() => {
+                  setIsPermanentDelete(true);
+                  handleDeleteMedicine(true);
+                }}
+              >
+                Permanently Delete
+              </Button>
+            )}
           </div>
         </div>
       </Modal>
