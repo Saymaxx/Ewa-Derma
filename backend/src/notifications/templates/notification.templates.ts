@@ -33,10 +33,10 @@ export interface PatientRegistrationTemplateData {
 
 export const META_TEMPLATES = {
   PATIENT_REGISTRATION: {
-    name: 'patient_registration_notice',
+    name: 'ewa_registration_update',
     category: 'UTILITY',
-    language: 'en',
-    sample: 'Your registration with Ewa Derma Clinic is confirmed. Patient Name: {{1}}, Patient ID: {{2}}. Thank you!',
+    language: 'en_US',
+    sample: 'Hi {{1}}, thank you for choosing Ewa Derma Clinic. Your visit reference number is {{2}}. Thank you.',
   },
 } as const;
 
@@ -50,7 +50,7 @@ export class NotificationTemplates {
     const phone = data.contactPhone || this.CLINIC_PHONE;
     const subject = `Welcome to ${clinic} — Registration Confirmed (${data.patientId})`;
 
-    const content = `Your registration with ${clinic} is confirmed. Patient Name: ${data.patientName}, Patient ID: ${data.patientId}. Thank you!`;
+    const content = `Hi ${data.patientName}, thank you for choosing ${clinic}. Your visit reference number is ${data.patientId}. Thank you.`;
 
     return {
       subject,
